@@ -4,6 +4,9 @@ namespace CaseManagmentSystem_CMS_
     {
         public static void Main(string[] args)
         {
+
+            //Added By Emad For GitHub Ingegration
+
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.

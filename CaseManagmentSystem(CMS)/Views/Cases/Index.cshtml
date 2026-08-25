@@ -1,0 +1,29 @@
+﻿@model IEnumerable<CaseManagementSystem.ViewModels.CaseListViewModel>
+
+<h2>All Cases</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>External ID</th>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Stage</th>
+            <th>Expert</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.ExternalCaseId</td>
+                <td>@c.Title</td>
+                <td>@c.Priority</td>
+                <td>@c.CurrentStage</td>
+                <td>@c.AssignedExpertName</td>
+                <td><a asp-action="Details" asp-route-id="@c.Id">Details</a></td>
+            </tr>
+        }
+    </tbody>
+</table>

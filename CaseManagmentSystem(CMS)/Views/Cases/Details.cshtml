@@ -1,0 +1,51 @@
+﻿@model CaseManagementSystem.ViewModels.CaseDetailsViewModel
+
+<h2>Case Details</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">External ID</dt>
+    <dd class="col-sm-9">@Model.ExternalCaseId</dd>
+
+    <dt class="col-sm-3">Title</dt>
+    <dd class="col-sm-9">@Model.Title</dd>
+
+    <dt class="col-sm-3">Description</dt>
+    <dd class="col-sm-9">@Model.Description</dd>
+
+    <dt class="col-sm-3">Priority</dt>
+    <dd class="col-sm-9">@Model.Priority</dd>
+
+    <dt class="col-sm-3">Stage</dt>
+    <dd class="col-sm-9">@Model.CurrentStage</dd>
+
+    <dt class="col-sm-3">Assigned Expert</dt>
+    <dd class="col-sm-9">@Model.AssignedExpertName</dd>
+
+    <dt class="col-sm-3">SLA Start</dt>
+    <dd class="col-sm-9">@Model.SLAStartDate</dd>
+</dl>
+
+<h4>History</h4>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Action</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Comment</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var h in Model.History)
+        {
+            <tr>
+                <td>@h.CreatedAt</td>
+                <td>@h.Action</td>
+                <td>@h.PreviousStage</td>
+                <td>@h.NewStage</td>
+                <td>@h.Comment</td>
+            </tr>
+        }
+    </tbody>
+</table>

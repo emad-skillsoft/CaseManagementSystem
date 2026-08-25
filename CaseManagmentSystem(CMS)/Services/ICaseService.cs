@@ -4,9 +4,10 @@ namespace CaseManagementSystem.Services
 {
     public interface ICaseService
     {
-        Task<List<Case>> GetAllCasesAsync();
-        Task<List<Case>> GetMyCasesAsync(string userId);
-        Task<Case?> GetCaseDetailsAsync(int caseId);
+        Task<List<CaseListViewModel>> GetAllCasesAsync();
+        Task<List<CaseListViewModel>> GetMyCasesAsync(string userId);
+        Task<CaseDetailsViewModel?> GetCaseDetailsAsync(int caseId);
         Task<bool> AddUpdateAsync(int caseId, string userId, string updateText);
     }
 }
+

@@ -1,13 +1,13 @@
-﻿using CaseManagementSystem.Models;
+﻿using CaseManagementSystem.ViewModels;
 
 namespace CaseManagementSystem.Services
 {
     public interface ICaseService
     {
         Task<List<CaseListViewModel>> GetAllCasesAsync();
+
         Task<List<CaseListViewModel>> GetMyCasesAsync(string userId);
+
         Task<CaseDetailsViewModel?> GetCaseDetailsAsync(int caseId);
-        Task<bool> AddUpdateAsync(int caseId, string userId, string updateText);
     }
 }
-

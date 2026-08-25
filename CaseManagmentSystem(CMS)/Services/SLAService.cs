@@ -1,17 +1,56 @@
-﻿namespace CaseManagementSystem.Services
+﻿using CaseManagementSystem.Data;
+using CaseManagementSystem.Enums;
+using CaseManagmentSystem_CMS_.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CaseManagementSystem.Services
 {
     public class SLAService : ISLAService
     {
-        public DateTime GetDueDate(DateTime slaStartDate, int allowedHours)
-            => throw new NotImplementedException("Implemented in Session 2.");
+        private readonly ApplicationDbContext _db;
 
-        public TimeSpan GetTotalDuration(DateTime slaStartDate, DateTime? completedAt, DateTime? asOf = null)
-            => throw new NotImplementedException("Implemented in Session 2.");
+        public SLAService(ApplicationDbContext db)
+        {
+            _db = db;
+        }
 
-        public TimeSpan GetRemainingTime(DateTime dueDate, DateTime? completedAt, DateTime? asOf = null)
-            => throw new NotImplementedException("Implemented in Session 2.");
+        public async Task<DateTime?> GetDueDateAsync(CasePriority priority, DateTime slaStartDate)
+        {
+            var config = await _db.SLAConfigurations.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Priority == priority);
 
-        public bool IsDelayed(DateTime dueDate, DateTime? completedAt, DateTime? asOf = null)
-            => throw new NotImplementedException("Implemented in Session 3.");
+            return config == null
+                ? null
+                : slaStartDate.AddHours(config.AllowedHours);
+        }
+
+        public TimeSpan GetTotalDuration(
+            DateTime slaStartDate,
+            DateTime? completedAt,
+            DateTime? asOf = null)
+        {
+            var end = completedAt ?? asOf ?? DateTime.UtcNow;
+            return end <= slaStartDate
+                ? TimeSpan.Zero
+                : end - slaStartDate;
+        }
+
+        public TimeSpan GetRemainingTime(
+            DateTime dueDate,
+            DateTime? completedAt,
+            DateTime? asOf = null)
+        {
+            var end = completedAt ?? asOf ?? DateTime.UtcNow;
+            return dueDate - end;
+        }
+
+        public bool IsDelayed(
+            DateTime dueDate,
+            DateTime? completedAt,
+            DateTime? asOf = null)
+        {
+            var end = completedAt ?? asOf ?? DateTime.UtcNow;
+            return end > dueDate;
+        }
     }
 }

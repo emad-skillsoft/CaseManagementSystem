@@ -1,0 +1,22 @@
+﻿@model CaseManagementSystem.ViewModels.ExcelImportViewModel
+
+@{
+    ViewData["Title"] = "Excel Import";
+}
+
+<h2>Excel Import</h2>
+<p>Required columns:</p>
+<ul>
+    <li>ExternalCaseId</li>
+    <li>Title</li>
+    <li>Description</li>
+    <li>SLAStartDate</li>
+    <li>Priority</li>
+    <li>AssignedEmployeeNumber</li>
+</ul>
+
+<form method="post" enctype="multipart/form-data">
+    <input asp-for="ExcelFile" type="file" accept=".xlsx" class="form-control" />
+    <span asp-validation-for="ExcelFile" class="text-danger"></span>
+    <button type="submit" class="btn btn-primary mt-2">Upload</button>
+</form>

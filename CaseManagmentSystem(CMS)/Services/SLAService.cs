@@ -1,6 +1,5 @@
 ﻿using CaseManagementSystem.Data;
 using CaseManagementSystem.Enums;
-using CaseManagmentSystem_CMS_.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace CaseManagementSystem.Services

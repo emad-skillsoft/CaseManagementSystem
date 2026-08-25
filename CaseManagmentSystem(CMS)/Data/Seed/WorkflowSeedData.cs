@@ -1,6 +1,6 @@
 ﻿using CaseManagementSystem.Constants;
 using CaseManagementSystem.Models;
-using CaseManagmentSystem_CMS_.Data;
+using CaseManagementSystem.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace CaseManagementSystem.Data.Seed

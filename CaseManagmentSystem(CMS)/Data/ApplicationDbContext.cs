@@ -29,6 +29,18 @@ namespace CaseManagementSystem.Data
             builder.Entity<Case>()
                 .HasIndex(x => x.ExternalCaseId)
                 .IsUnique();
+
+            builder.Entity<WorkflowTransition>()
+    .HasOne(x => x.FromStage)
+    .WithMany()
+    .HasForeignKey(x => x.FromStageId)
+    .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<WorkflowTransition>()
+                .HasOne(x => x.ToStage)
+                .WithMany()
+                .HasForeignKey(x => x.ToStageId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

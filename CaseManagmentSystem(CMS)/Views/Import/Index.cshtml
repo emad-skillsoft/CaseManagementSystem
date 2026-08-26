@@ -1,22 +1,67 @@
 ﻿@model CaseManagementSystem.ViewModels.ExcelImportViewModel
-
 @{
     ViewData["Title"] = "Excel Import";
 }
 
-<h2>Excel Import</h2>
-<p>Required columns:</p>
-<ul>
-    <li>ExternalCaseId</li>
-    <li>Title</li>
-    <li>Description</li>
-    <li>SLAStartDate</li>
-    <li>Priority</li>
-    <li>AssignedEmployeeNumber</li>
-</ul>
+<h2>Excel Import Preview</h2>
 
-<form method="post" enctype="multipart/form-data">
-    <input asp-for="ExcelFile" type="file" accept=".xlsx" class="form-control" />
-    <span asp-validation-for="ExcelFile" class="text-danger"></span>
-    <button type="submit" class="btn btn-primary mt-2">Upload</button>
+<form asp-action="Preview" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="ExcelFile" class="form-label">Excel File</label>
+        <input asp-for="ExcelFile" type="file" accept=".xlsx" class="form-control" />
+        <span asp-validation-for="ExcelFile" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Validate & Preview</button>
 </form>
+
+@if (Model.Rows.Any())
+{
+    <hr />
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Row</th>
+                    <th>ExternalCaseId</th>
+                    <th>Title</th>
+                    <th>SLAStartDate</th>
+                    <th>Priority</th>
+                    <th>Employee</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.RowNumber</td>
+                        <td>@row.ExternalCaseId</td>
+                        <td>@row.Title</td>
+                        <td>@row.SLAStartDate</td>
+                        <td>@row.Priority</td>
+                        <td>@row.AssignedEmployeeNumber</td>
+                        <td>
+                            @if (row.IsValid)
+                            {
+                                <span class="text-success">Valid</span>
+                            }
+                            else
+                            {
+                                <ul class="text-danger mb-0">
+                                    @foreach (var error in row.Errors)
+                                    {
+                                        <li>@error</li>
+                                    }
+                                </ul>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

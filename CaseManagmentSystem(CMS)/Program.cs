@@ -40,6 +40,7 @@ namespace CaseManagementSystem
             // Application Services
             builder.Services.AddScoped<ICaseService, CaseService>();
             builder.Services.AddScoped<ISLAService, SLAService>();
+            builder.Services.AddScoped<IUserService, UserService>();
 
             var app = builder.Build();
 

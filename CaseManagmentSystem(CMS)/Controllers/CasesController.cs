@@ -27,13 +27,13 @@ namespace CaseManagementSystem.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var success = await _caseService
-                .AddUpdateAsync(model.CaseId, userId, model.UpdateText);
+            //var success = await _caseService
+              //  .AddUpdateAsync(model.CaseId, userId, model.UpdateText);
 
-            if (!success)
+            //if (!success)
                 return Forbid();
 
-            return RedirectToAction(nameof(Details), new { id = model.CaseId });
+            //return RedirectToAction(nameof(Details), new { id = model.CaseId });
         }
 
 

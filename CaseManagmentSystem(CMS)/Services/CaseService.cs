@@ -132,13 +132,13 @@ namespace CaseManagementSystem.Services
                 (WorkflowStageNames.Assigned or WorkflowStageNames.InProgress))
                 return false;
 
-            _db.CaseUpdates.Add(new CaseUpdate
-            {
-                CaseId = caseId,
-                UserId = userId,
-                UpdateText = updateText.Trim(),
-                CreatedAt = DateTime.UtcNow
-            });
+           // _db.CaseUpdates.Add(new CaseUpdate
+            //{
+              //  CaseId = caseId,
+                //UserId = userId,
+                //UpdateText = updateText.Trim(),
+                //CreatedAt = DateTime.UtcNow
+            //});
 
             var oldStageId = caseItem.CurrentWorkflowStageId;
             var oldStageName = caseItem.CurrentWorkflowStage!.Name;

@@ -1,4 +1,4 @@
-﻿using CaseManagmentSystem_CMS_.Dtos;
+﻿using CaseManagementSystem.Dtos;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 

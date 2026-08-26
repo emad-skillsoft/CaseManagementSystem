@@ -1,9 +1,9 @@
 ﻿using CaseManagementSystem.Models;
-using CaseManagmentSystem_CMS_.Models;
+using CaseManagementSystem.ViewModels;
 using CaseManagmentSystem_CMS_.ViewModels;
 using Microsoft.AspNetCore.Identity;
 
-namespace CaseManagmentSystem_CMS_.Services
+namespace CaseManagementSystem.Services
 {
     public interface IUserService
     {

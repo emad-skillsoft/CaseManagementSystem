@@ -1,4 +1,7 @@
 ﻿using CaseManagementSystem.Enums;
+using CaseManagementSystem.Models;
+using CaseManagementSystem.ViewModels;
+
 
 namespace CaseManagementSystem.Services
 {
@@ -8,5 +11,8 @@ namespace CaseManagementSystem.Services
         TimeSpan GetTotalDuration(DateTime slaStartDate, DateTime? completedAt, DateTime? asOf = null);
         TimeSpan GetRemainingTime(DateTime dueDate, DateTime? completedAt, DateTime? asOf = null);
         bool IsDelayed(DateTime dueDate, DateTime? completedAt, DateTime? asOf = null);
+        Task<TimeSpan> GetInProgressDurationAsync(int caseId, DateTime? asOf = null);
+        Task<SLAStatusViewModel> GetStatusAsync(Case caseItem, DateTime? asOf = null);
+
     }
 }

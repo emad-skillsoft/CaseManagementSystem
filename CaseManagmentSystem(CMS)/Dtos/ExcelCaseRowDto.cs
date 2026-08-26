@@ -1,4 +1,4 @@
-﻿namespace CaseManagmentSystem_CMS_.Dtos
+﻿namespace CaseManagementSystem.Dtos
 {
     public class ExcelCaseRowDto
     {

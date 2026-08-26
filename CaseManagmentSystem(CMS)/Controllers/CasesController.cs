@@ -1,5 +1,6 @@
 ﻿using CaseManagementSystem.Constants;
 using CaseManagementSystem.Services;
+using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -15,6 +16,26 @@ namespace CaseManagementSystem.Controllers
         {
             _caseService = caseService;
         }
+
+        [Authorize(Roles = RoleNames.Expert)]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddUpdate(CaseUpdateViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return RedirectToAction(nameof(Details), new { id = model.CaseId });
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            //var success = await _caseService
+              //  .AddUpdateAsync(model.CaseId, userId, model.UpdateText);
+
+            //if (!success)
+                return Forbid();
+
+            //return RedirectToAction(nameof(Details), new { id = model.CaseId });
+        }
+
 
         [Authorize(Roles = RoleNames.Supervisor)]
         public async Task<IActionResult> Index()

@@ -16,7 +16,16 @@ namespace CaseManagementSystem.ViewModels
         public string AssignedExpertName { get; set; } = string.Empty;
         public string CurrentStage { get; set; } = string.Empty;
         public List<CaseHistoryItemViewModel> History { get; set; } = new();
+        public List<CaseUpdateItemViewModel> Updates { get; set; } = new();
+
     }
+    public class CaseUpdateItemViewModel
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string UpdateText { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+    }
+
 
     public class CaseHistoryItemViewModel
     {
@@ -26,4 +35,5 @@ namespace CaseManagementSystem.ViewModels
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
 }

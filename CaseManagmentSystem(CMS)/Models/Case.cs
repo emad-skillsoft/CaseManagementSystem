@@ -14,6 +14,7 @@ namespace CaseManagementSystem.Models
         public string AssignedExpertId { get; set; } = string.Empty;
         public int CurrentWorkflowStageId { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public ICollection<CaseUpdate> Updates { get; set; } = new List<CaseUpdate>();
 
         public ApplicationUser? AssignedExpert { get; set; }
         public WorkflowStage? CurrentWorkflowStage { get; set; }

@@ -48,4 +48,33 @@
             </tr>
         }
     </tbody>
+    @if (User.IsInRole("Expert")
+    && (Model.CurrentStage == "Assigned" || Model.CurrentStage == "InProgress"))
+    {
+        <h4>Add Update</h4>
+
+        <form asp-action="AddUpdate" method="post">
+            <input type="hidden" name="CaseId" value="@Model.Id" />
+
+            <textarea name="UpdateText"
+                      class="form-control"
+                      required></textarea>
+
+            <button class="btn btn-primary mt-2" type="submit">
+                Save Update
+            </button>
+        </form>
+    }
+
+    <h4 class="mt-4">Updates</h4>
+
+    @foreach (var update in Model.Updates)
+    {
+        <div class="border rounded p-2 mb-2">
+            <strong>@update.UserName</strong>
+            <small>@update.CreatedAt</small>
+            <div>@update.UpdateText</div>
+        </div>
+    }
+
 </table>

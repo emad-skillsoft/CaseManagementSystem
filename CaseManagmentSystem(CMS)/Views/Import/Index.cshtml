@@ -14,8 +14,22 @@
         <span asp-validation-for="ExcelFile" class="text-danger"></span>
     </div>
 
-    <button type="submit" class="btn btn-primary">Validate & Preview</button>
+   <button type="submit" asp-action="Preview" class="btn btn-secondary">
+    Validate & Preview
+</button>
+
+<button type="submit" asp-action="Import" class="btn btn-primary">
+    Import Valid Rows
+</button>
+
 </form>
+@if (ViewBag.Message != null)
+{
+    <div class="alert alert-info mt-3">
+        @ViewBag.Message
+    </div>
+}
+
 
 @if (Model.Rows.Any())
 {

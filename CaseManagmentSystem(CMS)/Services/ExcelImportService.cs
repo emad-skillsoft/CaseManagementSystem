@@ -1,12 +1,26 @@
 ﻿
 using CaseManagementSystem.Dtos;
 using ClosedXML.Excel;
+using CaseManagementSystem.Constants;
+using CaseManagementSystem.Data;
+using CaseManagementSystem.Enums;
+using CaseManagementSystem.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 
 namespace CaseManagementSystem.Services
 {
     public class ExcelImportService : IExcelImportService
     {
+        private readonly ApplicationDbContext _db;
+        private readonly IUserService _userService;
+        public ExcelImportService(ApplicationDbContext db, IUserService userService)
+        {
+            _db = db;
+            _userService = userService;
+        }
+
+
         private static readonly string[] ExpectedHeaders =
         {
             "ExternalCaseId",
@@ -127,5 +141,63 @@ namespace CaseManagementSystem.Services
 
             return Task.FromResult(result);
         }
+
+        public async Task<int> ImportCasesAsync(
+    List<ExcelCaseRowDto> rows,
+    string performedByUserId)
+        {
+            var assignedStage = await _db.WorkflowStages
+                .FirstAsync(x => x.Name == Constants.WorkflowStageNames.Assigned);
+
+            var imported = 0;
+
+            foreach (var row in rows.Where(x => x.IsValid))
+            {
+                var expert = await _userService
+                    .GetExpertByEmployeeNumberAsync(row.AssignedEmployeeNumber);
+
+                if (expert == null)
+                {
+                    row.Errors.Add("Expert was not found for the supplied Employee Number.");
+                    continue;
+                }
+
+                if (!Enum.TryParse<CasePriority>(row.Priority, true, out var priority)
+                    || row.SLAStartDate == null)
+                {
+                    row.Errors.Add("Row data could not be converted to Case values.");
+                    continue;
+                }
+
+                var caseItem = new Case
+                {
+                    ExternalCaseId = row.ExternalCaseId,
+                    Title = row.Title,
+                    Description = row.Description,
+                    Priority = priority,
+                    SLAStartDate = row.SLAStartDate.Value,
+                    ImportedAt = DateTime.UtcNow,
+                    AssignedExpertId = expert.Id,
+                    CurrentWorkflowStageId = assignedStage.Id
+                };
+
+                caseItem.History.Add(new CaseStatusHistory
+                {
+                    PerformedByUserId = performedByUserId,
+                    Action = "Imported and automatically assigned",
+                    PreviousStageId = null,
+                    NewStageId = assignedStage.Id,
+                    Comment = $"Assigned using EmployeeNumber {row.AssignedEmployeeNumber}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                _db.Cases.Add(caseItem);
+                await _db.SaveChangesAsync();
+                imported++;
+            }
+
+            return imported;
+        }
+
     }
 }

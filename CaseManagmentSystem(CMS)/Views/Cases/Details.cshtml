@@ -76,5 +76,31 @@
             <div>@update.UpdateText</div>
         </div>
     }
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (User.IsInRole("Expert") && Model.CurrentStage == "InProgress")
+{
+    <h4>Start Challenge</h4>
+
+    <form asp-action="StartChallenge" method="post">
+        <input type="hidden" name="CaseId" value="@Model.Id" />
+        <textarea name="Reason" class="form-control" required></textarea>
+        <button class="btn btn-warning mt-2">I Have a Challenge</button>
+    </form>
+}
+
+@if (User.IsInRole("Supervisor") && Model.CurrentStage == "Challenge")
+{
+    <h4>Resolve Challenge</h4>
+
+    <form asp-action="ResolveChallenge" method="post">
+        <input type="hidden" name="CaseId" value="@Model.Id" />
+        <textarea name="SupervisorComment" class="form-control" required></textarea>
+        <button class="btn btn-success mt-2">Resolve Challenge</button>
+    </form>
+}
 
 </table>

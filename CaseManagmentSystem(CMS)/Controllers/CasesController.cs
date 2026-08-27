@@ -11,11 +11,18 @@ namespace CaseManagementSystem.Controllers
     public class CasesController : Controller
     {
         private readonly ICaseService _caseService;
+        private readonly IWorkflowService _workflowService;
 
-        public CasesController(ICaseService caseService)
+        public CasesController(
+            ICaseService caseService,
+            IWorkflowService workflowService)
         {
             _caseService = caseService;
+            _workflowService = workflowService;
         }
+
+        
+        
 
         [Authorize(Roles = RoleNames.Expert)]
         [HttpPost]

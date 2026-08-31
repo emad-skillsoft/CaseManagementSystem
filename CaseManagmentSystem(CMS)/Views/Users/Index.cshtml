@@ -17,6 +17,7 @@
             <th>Employee #</th>
             <th>Username</th>
             <th>Email</th>
+            <th>Action</th>
         </tr>
     </thead>
 
@@ -28,6 +29,13 @@
                 <td>@user.EmployeeNumber</td>
                 <td>@user.UserName</td>
                 <td>@user.Email</td>
+                <td>
+                    <a asp-action="Edit"
+                       asp-route-id="@user.Id"
+                       class="btn btn-sm btn-outline-primary">
+                        Edit
+                    </a>
+                </td>
             </tr>
         }
     </tbody>

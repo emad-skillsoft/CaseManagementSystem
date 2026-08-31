@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CaseManagmentSystem_CMS_.ViewModels
+namespace CaseManagementSystem.ViewModels
 {
     public class EditUserViewModel
     {

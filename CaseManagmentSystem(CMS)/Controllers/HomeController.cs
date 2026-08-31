@@ -1,8 +1,8 @@
-using CaseManagmentSystem_CMS_.Models;
+using CaseManagementSystem.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace CaseManagmentSystem_CMS_.Controllers
+namespace CaseManagementSystem.Controllers
 {
     public class HomeController : Controller
     {

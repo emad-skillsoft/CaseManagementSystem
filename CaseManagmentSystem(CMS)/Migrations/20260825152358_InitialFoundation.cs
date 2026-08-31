@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CaseManagmentSystem_CMS_.Migrations
+namespace CaseManagementSystem.Migrations
 {
     /// <inheritdoc />
     public partial class InitialFoundation : Migration

@@ -2,7 +2,7 @@
 using CaseManagementSystem.Services;
 using CaseManagementSystem.ViewModels;
 
-using CaseManagmentSystem_CMS_.ViewModels;
+using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,6 +47,35 @@ namespace CaseManagementSystem.Controllers
                     string.Empty,
                     error.Description);
             }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(string id)
+        {
+            var model = await _userService.GetUserForEditAsync(id);
+
+            if (model == null)
+                return NotFound();
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(EditUserViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var result = await _userService.UpdateUserAsync(model);
+
+            if (result.Succeeded)
+                return RedirectToAction(nameof(Index));
+
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
 
             return View(model);
         }

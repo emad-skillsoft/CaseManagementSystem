@@ -2,7 +2,7 @@
 using CaseManagementSystem.Models;
 using CaseManagementSystem.ViewModels;
 using CaseManagementSystem.Services;
-using CaseManagmentSystem_CMS_.ViewModels;
+using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -99,24 +99,78 @@ namespace CaseManagementSystem.Services
             return IdentityResult.Success;
         }
 
-        public Task<EditUserViewModel?> GetUserForEditAsync(
-            string id)
+        public async Task<EditUserViewModel?> GetUserForEditAsync(string id)
         {
-            // Implemented in Session 4.
-            return Task.FromResult<EditUserViewModel?>(null);
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user == null)
+                return null;
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return new EditUserViewModel
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                EmployeeNumber = user.EmployeeNumber,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Role = roles.FirstOrDefault() ?? string.Empty
+            };
         }
 
-        public Task<IdentityResult> UpdateUserAsync(
-            EditUserViewModel model)
+        public async Task<IdentityResult> UpdateUserAsync(EditUserViewModel model)
         {
-            // Implemented in Session 4.
-            return Task.FromResult(
-                IdentityResult.Failed(
+            if (model.Role != RoleNames.Supervisor &&
+                model.Role != RoleNames.Expert)
+            {
+                return IdentityResult.Failed(
+                    new IdentityError { Description = "Invalid role." });
+            }
+
+            var user = await _userManager.FindByIdAsync(model.Id);
+
+            if (user == null)
+            {
+                return IdentityResult.Failed(
+                    new IdentityError { Description = "User not found." });
+            }
+
+            var duplicateEmployee = await _userManager.Users.AnyAsync(x =>
+                x.EmployeeNumber == model.EmployeeNumber &&
+                x.Id != model.Id);
+
+            if (duplicateEmployee)
+            {
+                return IdentityResult.Failed(
                     new IdentityError
                     {
-                        Description =
-                            "Edit is implemented in Session 4."
-                    }));
+                        Description = "Employee Number already exists."
+                    });
+            }
+
+            user.FullName = model.FullName.Trim();
+            user.EmployeeNumber = model.EmployeeNumber.Trim();
+            user.UserName = model.UserName.Trim();
+            user.Email = model.Email.Trim();
+
+            var updateResult = await _userManager.UpdateAsync(user);
+
+            if (!updateResult.Succeeded)
+                return updateResult;
+
+            var oldRoles = await _userManager.GetRolesAsync(user);
+
+            if (oldRoles.Any())
+            {
+                var removeResult =
+                    await _userManager.RemoveFromRolesAsync(user, oldRoles);
+
+                if (!removeResult.Succeeded)
+                    return removeResult;
+            }
+
+            return await _userManager.AddToRoleAsync(user, model.Role);
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace CaseManagmentSystem_CMS_.Models
+namespace CaseManagementSystem.Models
 {
     public class ErrorViewModel
     {

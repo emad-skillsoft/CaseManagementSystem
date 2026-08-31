@@ -1,6 +1,6 @@
 ﻿using CaseManagementSystem.Models;
 using CaseManagementSystem.ViewModels;
-using CaseManagmentSystem_CMS_.ViewModels;
+using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Identity;
 
 namespace CaseManagementSystem.Services

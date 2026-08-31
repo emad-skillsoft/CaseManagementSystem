@@ -21,6 +21,9 @@ namespace CaseManagementSystem.Data
         // Session 3
         public DbSet<CaseUpdate> CaseUpdates { get; set; }
 
+        // Session 4
+        public DbSet<CaseChallenge> CaseChallenges => Set<CaseChallenge>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -57,6 +60,25 @@ namespace CaseManagementSystem.Data
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // Session 4 - CaseChallenge relationships
+            builder.Entity<CaseChallenge>()
+                .HasOne(x => x.Case)
+                .WithMany(x => x.Challenges)
+                .HasForeignKey(x => x.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<CaseChallenge>()
+                .HasOne(x => x.StartedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.StartedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CaseChallenge>()
+                .HasOne(x => x.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

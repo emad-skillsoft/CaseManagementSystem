@@ -5,7 +5,6 @@ using CaseManagementSystem.Models;
 using WorkflowStages = CaseManagementSystem.Constants.WorkflowStageNames;
 using Microsoft.EntityFrameworkCore;
 using CaseManagementSystem.Constants;
-using CaseManagementSystem.Models;
 using CaseManagementSystem.ViewModels;
 
 

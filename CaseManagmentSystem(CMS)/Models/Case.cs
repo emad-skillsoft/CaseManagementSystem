@@ -16,6 +16,8 @@ namespace CaseManagementSystem.Models
         public DateTime? CompletedAt { get; set; }
         public ICollection<CaseUpdate> Updates { get; set; } = new List<CaseUpdate>();
 
+        public ICollection<CaseChallenge> Challenges { get; set; }
+    = new List<CaseChallenge>();
         public ApplicationUser? AssignedExpert { get; set; }
         public WorkflowStage? CurrentWorkflowStage { get; set; }
         public ICollection<CaseStatusHistory> History { get; set; } = new List<CaseStatusHistory>();

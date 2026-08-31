@@ -2,6 +2,7 @@
 using global::CaseManagementSystem.Models;
 using global::CaseManagementSystem.Services;
 using Microsoft.EntityFrameworkCore;
+using CaseManagementSystem.Constants;
 
 namespace CaseManagementSystem.Services
 {

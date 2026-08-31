@@ -9,5 +9,7 @@ namespace CaseManagementSystem.Services
         Task<List<CaseListViewModel>> GetMyCasesAsync(string userId);
 
         Task<CaseDetailsViewModel?> GetCaseDetailsAsync(int caseId);
+
+        Task<bool> AddUpdateAsync(int caseId, string userId, string updateText);
     }
 }

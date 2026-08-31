@@ -21,9 +21,6 @@ namespace CaseManagementSystem.Controllers
             _workflowService = workflowService;
         }
 
-        
-        
-
         [Authorize(Roles = RoleNames.Expert)]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -34,15 +31,14 @@ namespace CaseManagementSystem.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            //var success = await _caseService
-              //  .AddUpdateAsync(model.CaseId, userId, model.UpdateText);
+            var success = await _caseService
+                .AddUpdateAsync(model.CaseId, userId, model.UpdateText);
 
-            //if (!success)
+            if (!success)
                 return Forbid();
 
-            //return RedirectToAction(nameof(Details), new { id = model.CaseId });
+            return RedirectToAction(nameof(Details), new { id = model.CaseId });
         }
-
 
         [Authorize(Roles = RoleNames.Supervisor)]
         public async Task<IActionResult> Index()
@@ -54,6 +50,7 @@ namespace CaseManagementSystem.Controllers
         public async Task<IActionResult> MyCases()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
             return View(await _caseService.GetMyCasesAsync(userId));
         }
 
@@ -67,6 +64,7 @@ namespace CaseManagementSystem.Controllers
             if (User.IsInRole(RoleNames.Expert))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
                 if (model.AssignedExpertId != userId)
                     return Forbid();
             }

@@ -41,7 +41,8 @@ namespace CaseManagementSystem
             builder.Services.AddScoped<ICaseService, CaseService>();
             builder.Services.AddScoped<ISLAService, SLAService>();
             builder.Services.AddScoped<IUserService, UserService>();
-
+            builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+            builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
             var app = builder.Build();
 
             // Seed Identity roles and initial Supervisor

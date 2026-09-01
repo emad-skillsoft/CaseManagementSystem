@@ -7,6 +7,7 @@ using CaseManagementSystem.Enums;
 using CaseManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+
 using WorkflowStageNames = CaseManagementSystem.Constants.WorkflowStageNames;
 
 namespace CaseManagementSystem.Services
@@ -143,21 +144,32 @@ namespace CaseManagementSystem.Services
             return Task.FromResult(result);
         }
 
-        public async Task<int> ImportCasesAsync(
-     List<ExcelCaseRowDto> rows,
-     string performedByUserId)
+        public async Task<ImportResultDto> ImportCasesAsync(
+         List<ExcelCaseRowDto> rows,
+         string performedByUserId)
         {
+            var result = new ImportResultDto
+            {
+                TotalRows = rows.Count
+            };
+
             var assignedStage = await _db.WorkflowStages
                 .FirstAsync(x => x.Name == WorkflowStageNames.Assigned);
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var imported = 0;
 
-            foreach (var row in rows.Where(x => x.IsValid))
+            foreach (var row in rows)
             {
+                if (!row.IsValid)
+                {
+                    result.Invalid++;
+                    continue;
+                }
+
                 if (!seen.Add(row.ExternalCaseId))
                 {
                     row.Errors.Add("Duplicate ExternalCaseId inside this Excel file.");
+                    result.Duplicates++;
                     continue;
                 }
 
@@ -167,6 +179,7 @@ namespace CaseManagementSystem.Services
                 if (existsInDatabase)
                 {
                     row.Errors.Add("ExternalCaseId already exists in the database.");
+                    result.Duplicates++;
                     continue;
                 }
 
@@ -177,9 +190,18 @@ namespace CaseManagementSystem.Services
                 {
                     row.Errors.Add("Expert was not found. Row sent to Needs Review.");
 
+                    Enum.TryParse<CasePriority>(
+                        row.Priority,
+                        true,
+                        out var reviewPriority);
+
                     _db.ImportReviewItems.Add(new ImportReviewItem
                     {
                         ExternalCaseId = row.ExternalCaseId,
+                        Title = row.Title,
+                        Description = row.Description,
+                        Priority = reviewPriority,
+                        SLAStartDate = row.SLAStartDate!.Value,
                         EmployeeNumber = row.AssignedEmployeeNumber,
                         Issue = "Expert was not found for EmployeeNumber.",
                         RowNumber = row.RowNumber,
@@ -188,10 +210,14 @@ namespace CaseManagementSystem.Services
                     });
 
                     await _db.SaveChangesAsync();
+                    result.NeedsReview++;
                     continue;
                 }
 
-                Enum.TryParse<CasePriority>(row.Priority, true, out var priority);
+                Enum.TryParse<CasePriority>(
+                    row.Priority,
+                    true,
+                    out var priority);
 
                 var caseItem = new Case
                 {
@@ -216,11 +242,12 @@ namespace CaseManagementSystem.Services
 
                 _db.Cases.Add(caseItem);
                 await _db.SaveChangesAsync();
-                imported++;
+                result.Imported++;
             }
 
-            return imported;
+            return result;
         }
+
 
 
         public Task<List<ImportReviewItem>> GetReviewItemsAsync()
@@ -230,5 +257,67 @@ namespace CaseManagementSystem.Services
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }
+        public async Task<bool> ResolveReviewItemAsync(
+    int reviewItemId,
+    string employeeNumber,
+    string performedByUserId)
+        {
+            if (string.IsNullOrWhiteSpace(employeeNumber))
+                return false;
+
+            var reviewItem = await _db.ImportReviewItems
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewItemId &&
+                    !x.IsResolved);
+
+            if (reviewItem == null)
+                return false;
+
+            var duplicateCase = await _db.Cases
+                .AnyAsync(x => x.ExternalCaseId == reviewItem.ExternalCaseId);
+
+            if (duplicateCase)
+                return false;
+
+            var expert = await _userService
+                .GetExpertByEmployeeNumberAsync(employeeNumber.Trim());
+
+            if (expert == null)
+                return false;
+
+            var assignedStage = await _db.WorkflowStages
+                .FirstAsync(x => x.Name == WorkflowStageNames.Assigned);
+
+            var caseItem = new Case
+            {
+                ExternalCaseId = reviewItem.ExternalCaseId,
+                Title = reviewItem.Title,
+                Description = reviewItem.Description,
+                Priority = reviewItem.Priority,
+                SLAStartDate = reviewItem.SLAStartDate,
+                ImportedAt = DateTime.UtcNow,
+                AssignedExpertId = expert.Id,
+                CurrentWorkflowStageId = assignedStage.Id
+            };
+
+            caseItem.History.Add(new CaseStatusHistory
+            {
+                PerformedByUserId = performedByUserId,
+                Action = "Import Review resolved and Case assigned",
+                NewStageId = assignedStage.Id,
+                Comment = $"EmployeeNumber corrected to {employeeNumber.Trim()}",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            reviewItem.EmployeeNumber = employeeNumber.Trim();
+            reviewItem.Issue = "Resolved";
+            reviewItem.IsResolved = true;
+
+            _db.Cases.Add(caseItem);
+            await _db.SaveChangesAsync();
+
+            return true;
+        }
+
     }
 }

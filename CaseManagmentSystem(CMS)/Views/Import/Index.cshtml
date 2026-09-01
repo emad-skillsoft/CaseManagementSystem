@@ -23,6 +23,39 @@
 </button>
 
 </form>
+@if (Model.Result != null)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            Import Result
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col">
+                    <strong>Total</strong>
+                    <div>@Model.Result.TotalRows</div>
+                </div>
+                <div class="col">
+                    <strong>Imported</strong>
+                    <div>@Model.Result.Imported</div>
+                </div>
+                <div class="col">
+                    <strong>Needs Review</strong>
+                    <div>@Model.Result.NeedsReview</div>
+                </div>
+                <div class="col">
+                    <strong>Invalid</strong>
+                    <div>@Model.Result.Invalid</div>
+                </div>
+                <div class="col">
+                    <strong>Duplicates</strong>
+                    <div>@Model.Result.Duplicates</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (ViewBag.Message != null)
 {
     <div class="alert alert-info mt-3">

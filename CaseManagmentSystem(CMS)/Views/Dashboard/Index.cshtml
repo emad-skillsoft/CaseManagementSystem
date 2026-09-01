@@ -1,0 +1,148 @@
+﻿@model CaseManagementSystem.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+    var filters = new[] { "All", "In Progress", "Challenged", "Delayed", "Completed" };
+
+    var chartValues = new[]
+    {
+        (Label: "In Progress", Value: Model.InProgressCount),
+        (Label: "Challenge", Value: Model.ChallengeCount),
+        (Label: "Delayed", Value: Model.DelayedCount),
+        (Label: "Completed", Value: Model.CompletedCount)
+    };
+
+    var chartMax = Math.Max(1, chartValues.Max(x => x.Value));
+}
+
+<h2 class="mb-4">Supervisor Dashboard</h2>
+
+<div class="row g-3 mb-4">
+    <div class="col-md">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-muted">Total Cases</div>
+                <div class="fs-2 fw-bold">@Model.TotalCases</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-muted">In Progress</div>
+                <div class="fs-2 fw-bold">@Model.InProgressCount</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-muted">Challenge</div>
+                <div class="fs-2 fw-bold">@Model.ChallengeCount</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-muted">Delayed</div>
+                <div class="fs-2 fw-bold">@Model.DelayedCount</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-muted">Completed</div>
+                <div class="fs-2 fw-bold">@Model.CompletedCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Basic Case Status Chart</div>
+    <div class="card-body">
+        @foreach (var item in chartValues)
+        {
+            var width = (int)Math.Round((double)item.Value / chartMax * 100);
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>@item.Label</span>
+                    <span>@item.Value</span>
+                </div>
+                <div class="progress" role="progressbar">
+                    <div class="progress-bar"
+                         style="width: @width%">
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Filter</label>
+        <select name="filter" class="form-select">
+            @foreach (var f in filters)
+            {
+                if (Model.SelectedFilter == f)
+                {
+                    <option value="@f" selected>@f</option>
+                }
+                else
+                {
+                    <option value="@f">@f</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+            Apply
+        </button>
+    </div>
+</form>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>External Case ID</th>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Stage</th>
+            <th>Expert</th>
+            <th>Due Date</th>
+            <th>Delayed</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cases)
+        {
+            <tr>
+                <td>@item.ExternalCaseId</td>
+                <td>@item.Title</td>
+                <td>@item.Priority</td>
+                <td>@item.CurrentStage</td>
+                <td>@item.AssignedExpert</td>
+                <td>@item.DueDate</td>
+                <td>@(item.IsDelayed ? "Yes" : "No")</td>
+                <td>
+                    <a asp-controller="Cases"
+                       asp-action="Details"
+                       asp-route-id="@item.Id">
+                        Details
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

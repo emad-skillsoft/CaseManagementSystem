@@ -7,6 +7,7 @@ using CaseManagementSystem.Enums;
 using CaseManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using WorkflowStageNames = CaseManagementSystem.Constants.WorkflowStageNames;
 
 namespace CaseManagementSystem.Services
 {

@@ -2,7 +2,6 @@
 using CaseManagementSystem.Dtos;
 using CaseManagementSystem.Models;
 using Microsoft.AspNetCore.Http;
-using CaseManagementSystem.Models;
 
 namespace CaseManagementSystem.Services
 {

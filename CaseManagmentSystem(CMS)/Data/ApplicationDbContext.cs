@@ -23,6 +23,7 @@ namespace CaseManagementSystem.Data
 
         // Session 4
         public DbSet<CaseChallenge> CaseChallenges => Set<CaseChallenge>();
+        public DbSet<ImportReviewItem> ImportReviewItems => Set<ImportReviewItem>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

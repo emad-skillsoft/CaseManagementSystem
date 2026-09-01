@@ -2,7 +2,6 @@
 using CaseManagementSystem.Models;
 using CaseManagementSystem.ViewModels;
 using CaseManagementSystem.Services;
-using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

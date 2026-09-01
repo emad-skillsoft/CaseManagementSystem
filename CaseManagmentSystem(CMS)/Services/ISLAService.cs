@@ -13,6 +13,7 @@ namespace CaseManagementSystem.Services
         bool IsDelayed(DateTime dueDate, DateTime? completedAt, DateTime? asOf = null);
         Task<TimeSpan> GetInProgressDurationAsync(int caseId, DateTime? asOf = null);
         Task<SLAStatusViewModel> GetStatusAsync(Case caseItem, DateTime? asOf = null);
+        Task<TimeSpan> GetChallengeDurationAsync(int caseId, DateTime? asOf = null);
 
     }
 }

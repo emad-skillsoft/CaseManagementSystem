@@ -101,7 +101,60 @@ namespace CaseManagementSystem.Services
         public async Task<SLAStatusViewModel> GetStatusAsync(Case caseItem, DateTime? asOf = null)
         {
             // Implementation for getting SLA status
-            throw new NotImplementedException();
+            var dueDate = await GetDueDateAsync(
+        caseItem.Priority,
+        caseItem.SLAStartDate);
+
+            var totalDuration = GetTotalDuration(
+                caseItem.SLAStartDate,
+                caseItem.CompletedAt,
+                asOf);
+
+            var inProgressDuration = await GetInProgressDurationAsync(
+                caseItem.Id,
+                asOf);
+            var challengeDuration = await GetChallengeDurationAsync(
+            caseItem.Id,
+            asOf);
+
+
+            return new SLAStatusViewModel
+            {
+                SLAStartDate = caseItem.SLAStartDate,
+                DueDate = dueDate,
+                TotalDuration = totalDuration,
+                InProgressDuration = inProgressDuration,
+                ChallengeDuration = challengeDuration,
+                RemainingTime = dueDate.HasValue
+                    ? GetRemainingTime(dueDate.Value, caseItem.CompletedAt, asOf)
+                    : TimeSpan.Zero,
+                IsDelayed = dueDate.HasValue
+                    && IsDelayed(dueDate.Value, caseItem.CompletedAt, asOf)
+            };
+
         }
+        public async Task<TimeSpan> GetChallengeDurationAsync(
+    int caseId,
+    DateTime? asOf = null)
+        {
+            var challenges = await _db.CaseChallenges
+                .AsNoTracking()
+                .Where(x => x.CaseId == caseId)
+                .ToListAsync();
+
+            var now = asOf ?? DateTime.UtcNow;
+            var total = TimeSpan.Zero;
+
+            foreach (var challenge in challenges)
+            {
+                var end = challenge.ResolvedAt ?? now;
+
+                if (end > challenge.StartedAt)
+                    total += end - challenge.StartedAt;
+            }
+
+            return total;
+        }
+
     }
 }

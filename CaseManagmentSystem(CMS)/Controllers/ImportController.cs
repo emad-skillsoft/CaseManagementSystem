@@ -65,6 +65,12 @@ namespace CaseManagementSystem.Controllers
             ViewBag.Message = $"Imported {imported} case(s).";
             return View("Index", model);
         }
+        [HttpGet]
+        public async Task<IActionResult> Review()
+        {
+            return View(await _excelImportService.GetReviewItemsAsync());
+        }
+
 
     }
 }

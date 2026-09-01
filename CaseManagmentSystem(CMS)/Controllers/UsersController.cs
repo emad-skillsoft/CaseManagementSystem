@@ -2,7 +2,6 @@
 using CaseManagementSystem.Services;
 using CaseManagementSystem.ViewModels;
 
-using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -7,6 +7,7 @@ using CaseManagementSystem.Enums;
 using CaseManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using WorkflowStageNames = CaseManagementSystem.Constants.WorkflowStageNames;
 
 namespace CaseManagementSystem.Services
 {
@@ -143,31 +144,54 @@ namespace CaseManagementSystem.Services
         }
 
         public async Task<int> ImportCasesAsync(
-    List<ExcelCaseRowDto> rows,
-    string performedByUserId)
+     List<ExcelCaseRowDto> rows,
+     string performedByUserId)
         {
             var assignedStage = await _db.WorkflowStages
-                .FirstAsync(x => x.Name == Constants.WorkflowStageNames.Assigned);
+                .FirstAsync(x => x.Name == WorkflowStageNames.Assigned);
 
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var imported = 0;
 
             foreach (var row in rows.Where(x => x.IsValid))
             {
+                if (!seen.Add(row.ExternalCaseId))
+                {
+                    row.Errors.Add("Duplicate ExternalCaseId inside this Excel file.");
+                    continue;
+                }
+
+                var existsInDatabase = await _db.Cases
+                    .AnyAsync(x => x.ExternalCaseId == row.ExternalCaseId);
+
+                if (existsInDatabase)
+                {
+                    row.Errors.Add("ExternalCaseId already exists in the database.");
+                    continue;
+                }
+
                 var expert = await _userService
                     .GetExpertByEmployeeNumberAsync(row.AssignedEmployeeNumber);
 
                 if (expert == null)
                 {
-                    row.Errors.Add("Expert was not found for the supplied Employee Number.");
+                    row.Errors.Add("Expert was not found. Row sent to Needs Review.");
+
+                    _db.ImportReviewItems.Add(new ImportReviewItem
+                    {
+                        ExternalCaseId = row.ExternalCaseId,
+                        EmployeeNumber = row.AssignedEmployeeNumber,
+                        Issue = "Expert was not found for EmployeeNumber.",
+                        RowNumber = row.RowNumber,
+                        IsResolved = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+
+                    await _db.SaveChangesAsync();
                     continue;
                 }
 
-                if (!Enum.TryParse<CasePriority>(row.Priority, true, out var priority)
-                    || row.SLAStartDate == null)
-                {
-                    row.Errors.Add("Row data could not be converted to Case values.");
-                    continue;
-                }
+                Enum.TryParse<CasePriority>(row.Priority, true, out var priority);
 
                 var caseItem = new Case
                 {
@@ -175,7 +199,7 @@ namespace CaseManagementSystem.Services
                     Title = row.Title,
                     Description = row.Description,
                     Priority = priority,
-                    SLAStartDate = row.SLAStartDate.Value,
+                    SLAStartDate = row.SLAStartDate!.Value,
                     ImportedAt = DateTime.UtcNow,
                     AssignedExpertId = expert.Id,
                     CurrentWorkflowStageId = assignedStage.Id
@@ -185,7 +209,6 @@ namespace CaseManagementSystem.Services
                 {
                     PerformedByUserId = performedByUserId,
                     Action = "Imported and automatically assigned",
-                    PreviousStageId = null,
                     NewStageId = assignedStage.Id,
                     Comment = $"Assigned using EmployeeNumber {row.AssignedEmployeeNumber}",
                     CreatedAt = DateTime.UtcNow
@@ -199,5 +222,13 @@ namespace CaseManagementSystem.Services
             return imported;
         }
 
+
+        public Task<List<ImportReviewItem>> GetReviewItemsAsync()
+        {
+            return _db.ImportReviewItems
+                .AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

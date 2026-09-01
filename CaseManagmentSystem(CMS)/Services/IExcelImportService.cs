@@ -1,6 +1,8 @@
 ﻿
 using CaseManagementSystem.Dtos;
+using CaseManagementSystem.Models;
 using Microsoft.AspNetCore.Http;
+using CaseManagementSystem.Models;
 
 namespace CaseManagementSystem.Services
 {
@@ -9,5 +11,6 @@ namespace CaseManagementSystem.Services
         Task<(bool IsValid, string ErrorMessage)> ValidateFileAsync(IFormFile file);
         Task<List<ExcelCaseRowDto>> ReadRowsAsync(IFormFile file);
         Task<int> ImportCasesAsync(List<ExcelCaseRowDto> rows, string performedByUserId);
+        Task<List<ImportReviewItem>> GetReviewItemsAsync();
     }
 }

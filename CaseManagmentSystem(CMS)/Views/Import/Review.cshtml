@@ -1,0 +1,29 @@
+﻿@model IEnumerable<CaseManagementSystem.Models.ImportReviewItem>
+
+<h2>Import Needs Review</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Case</th>
+            <th>Employee #</th>
+            <th>Issue</th>
+            <th>Row</th>
+            <th>Created</th>
+            <th>Resolved</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.ExternalCaseId</td>
+                <td>@item.EmployeeNumber</td>
+                <td>@item.Issue</td>
+                <td>@item.RowNumber</td>
+                <td>@item.CreatedAt</td>
+                <td>@item.IsResolved</td>
+            </tr>
+        }
+    </tbody>
+</table>

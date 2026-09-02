@@ -10,5 +10,6 @@ namespace CaseManagementSystem.ViewModels
         public IFormFile? ExcelFile { get; set; }
 
         public List<ExcelCaseRowDto> Rows { get; set; } = new();
+        public ImportResultDto? Result { get; set; }
     }
 }

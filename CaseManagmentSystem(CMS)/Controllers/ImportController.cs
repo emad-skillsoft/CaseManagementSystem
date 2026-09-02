@@ -2,9 +2,15 @@
 using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using CaseManagementSystem.Constants;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace CaseManagementSystem.Controllers
 {
+    [Authorize(Roles = RoleNames.Supervisor)]
+   
+
     public class ImportController : Controller
     {
         private readonly IExcelImportService _excelImportService;
@@ -43,32 +49,60 @@ namespace CaseManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Import(ExcelImportViewModel model)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || model.ExcelFile == null)
                 return View("Index", model);
 
-            var validation = await _excelImportService.ValidateFileAsync(model.ExcelFile!);
+            var validation = await _excelImportService
+                .ValidateFileAsync(model.ExcelFile);
 
             if (!validation.IsValid)
             {
-                ModelState.AddModelError(nameof(model.ExcelFile), validation.ErrorMessage);
+                ModelState.AddModelError(
+                    nameof(model.ExcelFile),
+                    validation.ErrorMessage);
+
                 return View("Index", model);
             }
 
-            model.Rows = await _excelImportService.ReadRowsAsync(model.ExcelFile!);
+            model.Rows = await _excelImportService
+                .ReadRowsAsync(model.ExcelFile);
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? string.Empty;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var imported = await _excelImportService
+            model.Result = await _excelImportService
                 .ImportCasesAsync(model.Rows, userId);
 
-            ViewBag.Message = $"Imported {imported} case(s).";
             return View("Index", model);
         }
+
         [HttpGet]
         public async Task<IActionResult> Review()
         {
             return View(await _excelImportService.GetReviewItemsAsync());
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResolveReview(
+    ImportReviewViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["ReviewError"] = "Employee Number is required.";
+                return RedirectToAction(nameof(Review));
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var success = await _excelImportService.ResolveReviewItemAsync(
+                model.ReviewItemId,
+                model.EmployeeNumber,
+                userId);
+
+            TempData[success ? "ReviewSuccess" : "ReviewError"] = success
+                ? "Review item resolved and Case created."
+                : "Review item could not be resolved. Check the Employee Number or duplicate Case.";
+
+            return RedirectToAction(nameof(Review));
         }
 
 

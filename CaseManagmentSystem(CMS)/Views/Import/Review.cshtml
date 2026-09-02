@@ -1,6 +1,20 @@
 ﻿@model IEnumerable<CaseManagementSystem.Models.ImportReviewItem>
 
 <h2>Import Needs Review</h2>
+@if (TempData["ReviewSuccess"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["ReviewSuccess"]
+    </div>
+}
+
+@if (TempData["ReviewError"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ReviewError"]
+    </div>
+}
+
 
 <table class="table table-striped">
     <thead>
@@ -11,6 +25,7 @@
             <th>Row</th>
             <th>Created</th>
             <th>Resolved</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -23,6 +38,32 @@
                 <td>@item.RowNumber</td>
                 <td>@item.CreatedAt</td>
                 <td>@item.IsResolved</td>
+                <td>
+                    @if (!item.IsResolved)
+                    {
+                        <form asp-action="ResolveReview" method="post" class="d-flex gap-2">
+                            <input type="hidden"
+                                   name="ReviewItemId"
+                                   value="@item.Id" />
+
+                            <input type="text"
+                                   name="EmployeeNumber"
+                                   class="form-control form-control-sm"
+                                   value="@item.EmployeeNumber"
+                                   placeholder="Correct Employee #" />
+
+                            <button type="submit"
+                                    class="btn btn-sm btn-success">
+                                Resolve
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="text-success">Resolved</span>
+                    }
+                </td>
+
             </tr>
         }
     </tbody>

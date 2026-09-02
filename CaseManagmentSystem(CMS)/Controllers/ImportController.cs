@@ -64,8 +64,20 @@ namespace CaseManagementSystem.Controllers
                 return View("Index", model);
             }
 
-            model.Rows = await _excelImportService
-                .ReadRowsAsync(model.ExcelFile);
+            try
+            {
+                model.Rows = await _excelImportService
+                    .ReadRowsAsync(model.ExcelFile);
+            }
+            catch
+            {
+                ModelState.AddModelError(
+                    nameof(model.ExcelFile),
+                    "The Excel file could not be processed.");
+
+                return View("Index", model);
+            }
+
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 

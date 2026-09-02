@@ -26,7 +26,10 @@ namespace CaseManagementSystem
 
             // Identity
             builder.Services
-                .AddIdentity<ApplicationUser, IdentityRole>()
+                .AddIdentity<ApplicationUser, IdentityRole>(options =>
+                {
+                    options.User.RequireUniqueEmail = true;
+                })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
@@ -43,6 +46,7 @@ namespace CaseManagementSystem
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IWorkflowService, WorkflowService>();
             builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
+
             var app = builder.Build();
 
             // Seed Identity roles and initial Supervisor

@@ -20,7 +20,9 @@ namespace CaseManagementSystem.Services
             string performedByUserId,
             string? comment = null)
         {
-            var caseItem = await _db.Cases.FindAsync(caseId);
+            var caseItem = await _db.Cases
+                .Include(x => x.CurrentWorkflowStage)
+                .FirstOrDefaultAsync(x => x.Id == caseId);
 
             var newStage = await _db.WorkflowStages
                 .FirstOrDefaultAsync(x => x.Name == newStageName);
@@ -28,20 +30,37 @@ namespace CaseManagementSystem.Services
             if (caseItem == null || newStage == null)
                 return false;
 
+            // Completed is a final stage.
+            if (caseItem.CurrentWorkflowStage?.Name
+                == WorkflowStageNames.Completed)
+            {
+                return false;
+            }
+
+            // Only transitions defined in WorkflowTransitions are allowed.
+            var isAllowed = await _db.WorkflowTransitions
+                .AnyAsync(x =>
+                    x.FromStageId == caseItem.CurrentWorkflowStageId &&
+                    x.ToStageId == newStage.Id);
+
+            if (!isAllowed)
+                return false;
+
             var oldStageId = caseItem.CurrentWorkflowStageId;
 
             caseItem.CurrentWorkflowStageId = newStage.Id;
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = performedByUserId,
-                Action = $"Stage changed to {newStageName}",
-                PreviousStageId = oldStageId,
-                NewStageId = newStage.Id,
-                Comment = comment,
-                CreatedAt = DateTime.UtcNow
-            });
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = performedByUserId,
+                    Action = $"Stage changed to {newStageName}",
+                    PreviousStageId = oldStageId,
+                    NewStageId = newStage.Id,
+                    Comment = comment,
+                    CreatedAt = DateTime.UtcNow
+                });
 
             await _db.SaveChangesAsync();
 
@@ -62,36 +81,42 @@ namespace CaseManagementSystem.Services
 
             if (caseItem == null
                 || caseItem.AssignedExpertId != userId
-                || caseItem.CurrentWorkflowStage?.Name != WorkflowStageNames.InProgress)
+                || caseItem.CurrentWorkflowStage?.Name
+                    != WorkflowStageNames.InProgress)
             {
                 return false;
             }
 
             var challengeStage = await _db.WorkflowStages
-                .FirstAsync(x => x.Name == WorkflowStageNames.Challenge);
+                .FirstAsync(x =>
+                    x.Name == WorkflowStageNames.Challenge);
 
-            var oldStageId = caseItem.CurrentWorkflowStageId;
+            var oldStageId =
+                caseItem.CurrentWorkflowStageId;
 
-            caseItem.CurrentWorkflowStageId = challengeStage.Id;
+            caseItem.CurrentWorkflowStageId =
+                challengeStage.Id;
 
-            _db.CaseChallenges.Add(new CaseChallenge
-            {
-                CaseId = caseId,
-                Reason = reason.Trim(),
-                StartedByUserId = userId,
-                StartedAt = DateTime.UtcNow
-            });
+            _db.CaseChallenges.Add(
+                new CaseChallenge
+                {
+                    CaseId = caseId,
+                    Reason = reason.Trim(),
+                    StartedByUserId = userId,
+                    StartedAt = DateTime.UtcNow
+                });
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = userId,
-                Action = "Challenge started",
-                PreviousStageId = oldStageId,
-                NewStageId = challengeStage.Id,
-                Comment = reason.Trim(),
-                CreatedAt = DateTime.UtcNow
-            });
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = userId,
+                    Action = "Challenge started",
+                    PreviousStageId = oldStageId,
+                    NewStageId = challengeStage.Id,
+                    Comment = reason.Trim(),
+                    CreatedAt = DateTime.UtcNow
+                });
 
             await _db.SaveChangesAsync();
 
@@ -111,41 +136,56 @@ namespace CaseManagementSystem.Services
                 .FirstOrDefaultAsync(x => x.Id == caseId);
 
             if (caseItem == null
-                || caseItem.CurrentWorkflowStage?.Name != WorkflowStageNames.Challenge)
+                || caseItem.CurrentWorkflowStage?.Name
+                    != WorkflowStageNames.Challenge)
             {
                 return false;
             }
 
             var challenge = await _db.CaseChallenges
-                .Where(x => x.CaseId == caseId && x.ResolvedAt == null)
+                .Where(x =>
+                    x.CaseId == caseId &&
+                    x.ResolvedAt == null)
                 .OrderByDescending(x => x.StartedAt)
                 .FirstOrDefaultAsync();
 
             if (challenge == null)
                 return false;
 
-            var inProgressStage = await _db.WorkflowStages
-                .FirstAsync(x => x.Name == WorkflowStageNames.InProgress);
+            var inProgressStage =
+                await _db.WorkflowStages
+                    .FirstAsync(x =>
+                        x.Name ==
+                        WorkflowStageNames.InProgress);
 
-            var oldStageId = caseItem.CurrentWorkflowStageId;
+            var oldStageId =
+                caseItem.CurrentWorkflowStageId;
+
             var now = DateTime.UtcNow;
 
-            challenge.ResolvedByUserId = supervisorUserId;
-            challenge.ResolvedAt = now;
-            challenge.SupervisorComment = comment.Trim();
+            challenge.ResolvedByUserId =
+                supervisorUserId;
 
-            caseItem.CurrentWorkflowStageId = inProgressStage.Id;
+            challenge.ResolvedAt =
+                now;
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = supervisorUserId,
-                Action = "Challenge resolved",
-                PreviousStageId = oldStageId,
-                NewStageId = inProgressStage.Id,
-                Comment = comment.Trim(),
-                CreatedAt = now
-            });
+            challenge.SupervisorComment =
+                comment.Trim();
+
+            caseItem.CurrentWorkflowStageId =
+                inProgressStage.Id;
+
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = supervisorUserId,
+                    Action = "Challenge resolved",
+                    PreviousStageId = oldStageId,
+                    NewStageId = inProgressStage.Id,
+                    Comment = comment.Trim(),
+                    CreatedAt = now
+                });
 
             await _db.SaveChangesAsync();
 
@@ -166,32 +206,43 @@ namespace CaseManagementSystem.Services
 
             if (caseItem == null
                 || caseItem.AssignedExpertId != userId
-                || caseItem.CurrentWorkflowStage?.Name != WorkflowStageNames.InProgress)
+                || caseItem.CurrentWorkflowStage?.Name
+                    != WorkflowStageNames.InProgress)
             {
                 return false;
             }
 
-            var pendingStage = await _db.WorkflowStages
-                .FirstAsync(x =>
-                    x.Name == WorkflowStageNames.CompletionPending);
+            var pendingStage =
+                await _db.WorkflowStages
+                    .FirstAsync(x =>
+                        x.Name ==
+                        WorkflowStageNames.CompletionPending);
 
-            var oldStageId = caseItem.CurrentWorkflowStageId;
+            var oldStageId =
+                caseItem.CurrentWorkflowStageId;
+
             var now = DateTime.UtcNow;
 
-            caseItem.CompletionSummary = summary.Trim();
-            caseItem.CompletionRequestedAt = now;
-            caseItem.CurrentWorkflowStageId = pendingStage.Id;
+            caseItem.CompletionSummary =
+                summary.Trim();
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = userId,
-                Action = "Completion submitted",
-                PreviousStageId = oldStageId,
-                NewStageId = pendingStage.Id,
-                Comment = summary.Trim(),
-                CreatedAt = now
-            });
+            caseItem.CompletionRequestedAt =
+                now;
+
+            caseItem.CurrentWorkflowStageId =
+                pendingStage.Id;
+
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = userId,
+                    Action = "Completion submitted",
+                    PreviousStageId = oldStageId,
+                    NewStageId = pendingStage.Id,
+                    Comment = summary.Trim(),
+                    CreatedAt = now
+                });
 
             await _db.SaveChangesAsync();
 
@@ -213,26 +264,35 @@ namespace CaseManagementSystem.Services
                 return false;
             }
 
-            var completedStage = await _db.WorkflowStages
-                .FirstAsync(x =>
-                    x.Name == WorkflowStageNames.Completed);
+            var completedStage =
+                await _db.WorkflowStages
+                    .FirstAsync(x =>
+                        x.Name ==
+                        WorkflowStageNames.Completed);
 
-            var oldStageId = caseItem.CurrentWorkflowStageId;
+            var oldStageId =
+                caseItem.CurrentWorkflowStageId;
+
             var now = DateTime.UtcNow;
 
-            caseItem.CurrentWorkflowStageId = completedStage.Id;
-            caseItem.CompletedAt = now;
+            caseItem.CurrentWorkflowStageId =
+                completedStage.Id;
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = supervisorUserId,
-                Action = "Completion approved",
-                PreviousStageId = oldStageId,
-                NewStageId = completedStage.Id,
-                Comment = "Case completed by Supervisor approval.",
-                CreatedAt = now
-            });
+            caseItem.CompletedAt =
+                now;
+
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = supervisorUserId,
+                    Action = "Completion approved",
+                    PreviousStageId = oldStageId,
+                    NewStageId = completedStage.Id,
+                    Comment =
+                        "Case completed by Supervisor approval.",
+                    CreatedAt = now
+                });
 
             await _db.SaveChangesAsync();
 
@@ -258,25 +318,32 @@ namespace CaseManagementSystem.Services
                 return false;
             }
 
-            var inProgressStage = await _db.WorkflowStages
-                .FirstAsync(x =>
-                    x.Name == WorkflowStageNames.InProgress);
+            var inProgressStage =
+                await _db.WorkflowStages
+                    .FirstAsync(x =>
+                        x.Name ==
+                        WorkflowStageNames.InProgress);
 
-            var oldStageId = caseItem.CurrentWorkflowStageId;
+            var oldStageId =
+                caseItem.CurrentWorkflowStageId;
+
             var now = DateTime.UtcNow;
 
-            caseItem.CurrentWorkflowStageId = inProgressStage.Id;
+            caseItem.CurrentWorkflowStageId =
+                inProgressStage.Id;
 
-            _db.CaseStatusHistories.Add(new CaseStatusHistory
-            {
-                CaseId = caseId,
-                PerformedByUserId = supervisorUserId,
-                Action = "Completion returned to work",
-                PreviousStageId = oldStageId,
-                NewStageId = inProgressStage.Id,
-                Comment = reason.Trim(),
-                CreatedAt = now
-            });
+            _db.CaseStatusHistories.Add(
+                new CaseStatusHistory
+                {
+                    CaseId = caseId,
+                    PerformedByUserId = supervisorUserId,
+                    Action =
+                        "Completion returned to work",
+                    PreviousStageId = oldStageId,
+                    NewStageId = inProgressStage.Id,
+                    Comment = reason.Trim(),
+                    CreatedAt = now
+                });
 
             await _db.SaveChangesAsync();
 

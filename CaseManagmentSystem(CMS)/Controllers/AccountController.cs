@@ -42,21 +42,6 @@ namespace CaseManagementSystem.Controllers
 
             if (result.Succeeded)
             {
-                var user = await _userManager.FindByNameAsync(model.UserName);
-
-                if (user != null)
-                {
-                    if (await _userManager.IsInRoleAsync(user, "Supervisor"))
-                    {
-                        return RedirectToAction("Index", "Dashboard");
-                    }
-
-                    if (await _userManager.IsInRoleAsync(user, "Expert"))
-                    {
-                        return RedirectToAction("MyCases", "Cases");
-                    }
-                }
-
                 return RedirectToAction("Index", "Home");
             }
 

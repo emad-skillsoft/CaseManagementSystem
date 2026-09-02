@@ -1,50 +1,201 @@
-﻿<!DOCTYPE html>
+﻿@using CaseManagementSystem.Constants
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - CaseManagementSystem</title>
+
+    <title>@ViewData["Title"] - Case Management System</title>
+
     <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/CaseManagementSystem.styles.css" asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/CaseManagementSystem.styles.css"
+          asp-append-version="true" />
 </head>
+
 <body>
+
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm mb-4">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CaseManagementSystem</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+
+                <!-- System Name -->
+                <a class="navbar-brand fw-bold"
+                   asp-controller="Home"
+                   asp-action="Index">
+                    Case Management System
+                </a>
+
+                <!-- Mobile Menu -->
+                <button class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#mainNavbar"
+                        aria-controls="mainNavbar"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
+
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+
+                <div class="collapse navbar-collapse"
+                     id="mainNavbar">
+
+                    <!-- Left Navigation -->
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <!-- Home -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Home"
+                                   asp-action="Index">
+                                    Home
+                                </a>
+                            </li>
+
+                            <!-- Dashboard - Supervisor + Expert -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Dashboard"
+                                   asp-action="Index">
+                                    Dashboard
+                                </a>
+                            </li>
+
+                            <!-- Supervisor Navigation -->
+                            @if (User.IsInRole(RoleNames.Supervisor))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Cases"
+                                       asp-action="Index">
+                                        All Cases
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Import"
+                                       asp-action="Index">
+                                        Import
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Import"
+                                       asp-action="Review">
+                                        Needs Review
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Users"
+                                       asp-action="Index">
+                                        Users
+                                    </a>
+                                </li>
+                            }
+
+                            <!-- Expert Navigation -->
+                            @if (User.IsInRole(RoleNames.Expert))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link"
+                                       asp-controller="Cases"
+                                       asp-action="MyCases">
+                                        My Cases
+                                    </a>
+                                </li>
+                            }
+                        }
+
                     </ul>
+
+                    <!-- Right Navigation -->
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <!-- Logged-in Username -->
+                            <li class="nav-item me-lg-3">
+                                <span class="navbar-text">
+                                    @User.Identity.Name
+                                </span>
+                            </li>
+
+                            <!-- Logout -->
+                            <li class="nav-item">
+                                <form asp-controller="Account"
+                                      asp-action="Logout"
+                                      method="post"
+                                      class="d-inline">
+
+                                    @Html.AntiForgeryToken()
+
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+                                        Logout
+                                    </button>
+
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <!-- Login -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Account"
+                                   asp-action="Login">
+                                    Login
+                                </a>
+                            </li>
+                        }
+
+                    </ul>
+
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+    <!-- Main Content -->
+    <div class="container-fluid px-4">
+        <main role="main" class="pb-4">
+
             @RenderBody()
+
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 1448 - CaseManagementSystem - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <!-- Footer -->
+    <footer class="border-top footer text-muted mt-4">
+        <div class="container-fluid px-4">
+            &copy; 1448 - Case Management System
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script src="~/js/site.js"
+            asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

@@ -5,10 +5,11 @@ using CaseManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CaseManagementSystem.Controllers
 {
-    [Authorize(Roles = RoleNames.Supervisor)]
+    [Authorize]
     public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _db;
@@ -25,10 +26,33 @@ namespace CaseManagementSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string filter = "All")
         {
-            var cases = await _db.Cases
+            // Only Supervisor and Expert can access the Dashboard
+            if (!User.IsInRole(RoleNames.Supervisor) &&
+                !User.IsInRole(RoleNames.Expert))
+            {
+                return Forbid();
+            }
+
+            var query = _db.Cases
                 .AsNoTracking()
                 .Include(x => x.CurrentWorkflowStage)
                 .Include(x => x.AssignedExpert)
+                .AsQueryable();
+
+            // Expert sees only his assigned Cases
+            if (User.IsInRole(RoleNames.Expert) &&
+                !User.IsInRole(RoleNames.Supervisor))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrWhiteSpace(userId))
+                    return Forbid();
+
+                query = query.Where(x =>
+                    x.AssignedExpertId == userId);
+            }
+
+            var cases = await query
                 .OrderByDescending(x => x.ImportedAt)
                 .ToListAsync();
 
@@ -44,8 +68,12 @@ namespace CaseManagementSystem.Controllers
                     ExternalCaseId = caseItem.ExternalCaseId,
                     Title = caseItem.Title,
                     Priority = caseItem.Priority.ToString(),
-                    CurrentStage = caseItem.CurrentWorkflowStage?.Name ?? string.Empty,
-                    AssignedExpert = caseItem.AssignedExpert?.FullName ?? string.Empty,
+                    CurrentStage =
+                        caseItem.CurrentWorkflowStage?.Name
+                        ?? string.Empty,
+                    AssignedExpert =
+                        caseItem.AssignedExpert?.FullName
+                        ?? string.Empty,
                     DueDate = sla.DueDate,
                     IsDelayed = sla.IsDelayed
                 });
@@ -54,24 +82,37 @@ namespace CaseManagementSystem.Controllers
             var model = new DashboardViewModel
             {
                 TotalCases = items.Count,
+
                 InProgressCount = items.Count(x =>
-                    x.CurrentStage == WorkflowStageNames.InProgress),
+                    x.CurrentStage ==
+                    WorkflowStageNames.InProgress),
+
                 ChallengeCount = items.Count(x =>
-                    x.CurrentStage == WorkflowStageNames.Challenge),
-                DelayedCount = items.Count(x => x.IsDelayed),
+                    x.CurrentStage ==
+                    WorkflowStageNames.Challenge),
+
+                DelayedCount = items.Count(x =>
+                    x.IsDelayed),
+
                 CompletedCount = items.Count(x =>
-                    x.CurrentStage == WorkflowStageNames.Completed),
+                    x.CurrentStage ==
+                    WorkflowStageNames.Completed),
+
                 SelectedFilter = filter
             };
 
             model.Cases = filter switch
             {
                 "In Progress" => items
-                    .Where(x => x.CurrentStage == WorkflowStageNames.InProgress)
+                    .Where(x =>
+                        x.CurrentStage ==
+                        WorkflowStageNames.InProgress)
                     .ToList(),
 
                 "Challenged" => items
-                    .Where(x => x.CurrentStage == WorkflowStageNames.Challenge)
+                    .Where(x =>
+                        x.CurrentStage ==
+                        WorkflowStageNames.Challenge)
                     .ToList(),
 
                 "Delayed" => items
@@ -79,7 +120,9 @@ namespace CaseManagementSystem.Controllers
                     .ToList(),
 
                 "Completed" => items
-                    .Where(x => x.CurrentStage == WorkflowStageNames.Completed)
+                    .Where(x =>
+                        x.CurrentStage ==
+                        WorkflowStageNames.Completed)
                     .ToList(),
 
                 _ => items

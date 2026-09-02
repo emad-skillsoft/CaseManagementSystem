@@ -13,13 +13,22 @@ namespace CaseManagementSystem.Models
         public DateTime ImportedAt { get; set; }
         public string AssignedExpertId { get; set; } = string.Empty;
         public int CurrentWorkflowStageId { get; set; }
+
         public DateTime? CompletedAt { get; set; }
-        public ICollection<CaseUpdate> Updates { get; set; } = new List<CaseUpdate>();
+
+        public string? CompletionSummary { get; set; }
+        public DateTime? CompletionRequestedAt { get; set; }
+
+        public ICollection<CaseUpdate> Updates { get; set; }
+            = new List<CaseUpdate>();
 
         public ICollection<CaseChallenge> Challenges { get; set; }
-    = new List<CaseChallenge>();
+            = new List<CaseChallenge>();
+
         public ApplicationUser? AssignedExpert { get; set; }
         public WorkflowStage? CurrentWorkflowStage { get; set; }
-        public ICollection<CaseStatusHistory> History { get; set; } = new List<CaseStatusHistory>();
+
+        public ICollection<CaseStatusHistory> History { get; set; }
+            = new List<CaseStatusHistory>();
     }
 }

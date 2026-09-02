@@ -1,6 +1,28 @@
-﻿@model CaseManagementSystem.ViewModels.CaseDetailsViewModel
+﻿@using CaseManagementSystem.Constants
+@model CaseManagementSystem.ViewModels.CaseDetailsViewModel
 
 <h2>Case Details</h2>
+
+@if (TempData["CaseSuccess"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["CaseSuccess"]
+    </div>
+}
+
+@if (TempData["CaseError"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["CaseError"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["Error"]
+    </div>
+}
 
 <dl class="row">
     <dt class="col-sm-3">External ID</dt>
@@ -25,7 +47,10 @@
     <dd class="col-sm-9">@Model.SLAStartDate</dd>
 </dl>
 
+<hr />
+
 <h4>History</h4>
+
 <table class="table table-sm">
     <thead>
         <tr>
@@ -36,6 +61,7 @@
             <th>Comment</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach (var h in Model.History)
         {
@@ -48,59 +74,213 @@
             </tr>
         }
     </tbody>
-    @if (User.IsInRole("Expert")
-    && (Model.CurrentStage == "Assigned" || Model.CurrentStage == "InProgress"))
-    {
-        <h4>Add Update</h4>
+</table>
 
-        <form asp-action="AddUpdate" method="post">
-            <input type="hidden" name="CaseId" value="@Model.Id" />
+@if (User.IsInRole(RoleNames.Expert)
+    && (Model.CurrentStage == WorkflowStageNames.Assigned
+        || Model.CurrentStage == WorkflowStageNames.InProgress))
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            Add Update
+        </div>
 
-            <textarea name="UpdateText"
-                      class="form-control"
-                      required></textarea>
+        <div class="card-body">
+            <form asp-action="AddUpdate" method="post">
+                <input type="hidden"
+                       name="CaseId"
+                       value="@Model.Id" />
 
-            <button class="btn btn-primary mt-2" type="submit">
-                Save Update
-            </button>
-        </form>
-    }
+                <div class="mb-3">
+                    <label class="form-label">
+                        Update
+                    </label>
 
-    <h4 class="mt-4">Updates</h4>
+                    <textarea name="UpdateText"
+                              class="form-control"
+                              rows="3"
+                              required></textarea>
+                </div>
+
+                <button class="btn btn-primary"
+                        type="submit">
+                    Save Update
+                </button>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="mt-4">
+    <h4>Updates</h4>
 
     @foreach (var update in Model.Updates)
     {
         <div class="border rounded p-2 mb-2">
             <strong>@update.UserName</strong>
-            <small>@update.CreatedAt</small>
-            <div>@update.UpdateText</div>
+            <small class="ms-2">
+                @update.CreatedAt
+            </small>
+
+            <div>
+                @update.UpdateText
+            </div>
         </div>
     }
-@if (TempData["Error"] != null)
+</div>
+
+@if (User.IsInRole(RoleNames.Expert)
+    && Model.CurrentStage == WorkflowStageNames.InProgress)
 {
-    <div class="alert alert-danger">@TempData["Error"]</div>
+    <div class="card mt-4">
+        <div class="card-header">
+            Start Challenge
+        </div>
+
+        <div class="card-body">
+            <form asp-action="StartChallenge" method="post">
+                <input type="hidden"
+                       name="CaseId"
+                       value="@Model.Id" />
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Challenge Reason
+                    </label>
+
+                    <textarea name="Reason"
+                              class="form-control"
+                              rows="3"
+                              required></textarea>
+                </div>
+
+                <button class="btn btn-warning"
+                        type="submit">
+                    I Have a Challenge
+                </button>
+            </form>
+        </div>
+    </div>
 }
 
-@if (User.IsInRole("Expert") && Model.CurrentStage == "InProgress")
+@if (User.IsInRole(RoleNames.Supervisor)
+    && Model.CurrentStage == WorkflowStageNames.Challenge)
 {
-    <h4>Start Challenge</h4>
+    <div class="card mt-4">
+        <div class="card-header">
+            Resolve Challenge
+        </div>
 
-    <form asp-action="StartChallenge" method="post">
-        <input type="hidden" name="CaseId" value="@Model.Id" />
-        <textarea name="Reason" class="form-control" required></textarea>
-        <button class="btn btn-warning mt-2">I Have a Challenge</button>
-    </form>
+        <div class="card-body">
+            <form asp-action="ResolveChallenge" method="post">
+                <input type="hidden"
+                       name="CaseId"
+                       value="@Model.Id" />
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Supervisor Comment
+                    </label>
+
+                    <textarea name="SupervisorComment"
+                              class="form-control"
+                              rows="3"
+                              required></textarea>
+                </div>
+
+                <button class="btn btn-success"
+                        type="submit">
+                    Resolve Challenge
+                </button>
+            </form>
+        </div>
+    </div>
 }
 
-@if (User.IsInRole("Supervisor") && Model.CurrentStage == "Challenge")
+@if (User.IsInRole(RoleNames.Expert)
+    && Model.CurrentStage == WorkflowStageNames.InProgress)
 {
-    <h4>Resolve Challenge</h4>
+    <div class="card mt-4">
+        <div class="card-header">
+            Submit Completion
+        </div>
 
-    <form asp-action="ResolveChallenge" method="post">
-        <input type="hidden" name="CaseId" value="@Model.Id" />
-        <textarea name="SupervisorComment" class="form-control" required></textarea>
-        <button class="btn btn-success mt-2">Resolve Challenge</button>
-    </form>
+        <div class="card-body">
+            <form asp-action="SubmitCompletion"
+                  method="post">
+
+                <input type="hidden"
+                       name="CaseId"
+                       value="@Model.Id" />
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Completion Summary
+                    </label>
+
+                    <textarea name="CompletionSummary"
+                              class="form-control"
+                              rows="4"
+                              required></textarea>
+                </div>
+
+                <button type="submit"
+                        class="btn btn-success">
+                    Submit Completion
+                </button>
+            </form>
+        </div>
+    </div>
 }
 
-</table>
+@if (User.IsInRole(RoleNames.Supervisor)
+    && Model.CurrentStage == WorkflowStageNames.CompletionPending)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            Supervisor Completion Review
+        </div>
+
+        <div class="card-body">
+
+            <form asp-action="ApproveCompletion"
+                  method="post"
+                  class="mb-3">
+
+                <input type="hidden"
+                       name="caseId"
+                       value="@Model.Id" />
+
+                <button type="submit"
+                        class="btn btn-success">
+                    Approve Completion
+                </button>
+            </form>
+
+            <form asp-action="ReturnToWork"
+                  method="post">
+
+                <input type="hidden"
+                       name="caseId"
+                       value="@Model.Id" />
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Return Reason
+                    </label>
+
+                    <textarea name="reason"
+                              class="form-control"
+                              rows="3"
+                              required></textarea>
+                </div>
+
+                <button type="submit"
+                        class="btn btn-warning">
+                    Return to Work
+                </button>
+            </form>
+
+        </div>
+    </div>
+}

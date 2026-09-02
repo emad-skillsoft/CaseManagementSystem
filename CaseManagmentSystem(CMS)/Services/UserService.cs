@@ -1,7 +1,6 @@
 ﻿using CaseManagementSystem.Constants;
 using CaseManagementSystem.Models;
 using CaseManagementSystem.ViewModels;
-using CaseManagementSystem.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +20,33 @@ namespace CaseManagementSystem.Services
             return _userManager.Users
                 .OrderBy(x => x.FullName)
                 .ToListAsync();
+        }
+
+        // Session 5 - User list with roles
+        public async Task<List<UserListItemViewModel>> GetUserListAsync()
+        {
+            var users = await _userManager.Users
+                .OrderBy(x => x.FullName)
+                .ToListAsync();
+
+            var result = new List<UserListItemViewModel>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+
+                result.Add(new UserListItemViewModel
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    EmployeeNumber = user.EmployeeNumber,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    Role = roles.FirstOrDefault() ?? string.Empty
+                });
+            }
+
+            return result;
         }
 
         public async Task<ApplicationUser?> GetExpertByEmployeeNumberAsync(
@@ -118,13 +144,17 @@ namespace CaseManagementSystem.Services
             };
         }
 
-        public async Task<IdentityResult> UpdateUserAsync(EditUserViewModel model)
+        public async Task<IdentityResult> UpdateUserAsync(
+            EditUserViewModel model)
         {
             if (model.Role != RoleNames.Supervisor &&
                 model.Role != RoleNames.Expert)
             {
                 return IdentityResult.Failed(
-                    new IdentityError { Description = "Invalid role." });
+                    new IdentityError
+                    {
+                        Description = "Invalid role."
+                    });
             }
 
             var user = await _userManager.FindByIdAsync(model.Id);
@@ -132,19 +162,24 @@ namespace CaseManagementSystem.Services
             if (user == null)
             {
                 return IdentityResult.Failed(
-                    new IdentityError { Description = "User not found." });
+                    new IdentityError
+                    {
+                        Description = "User not found."
+                    });
             }
 
-            var duplicateEmployee = await _userManager.Users.AnyAsync(x =>
-                x.EmployeeNumber == model.EmployeeNumber &&
-                x.Id != model.Id);
+            var duplicateEmployee =
+                await _userManager.Users.AnyAsync(x =>
+                    x.EmployeeNumber == model.EmployeeNumber &&
+                    x.Id != model.Id);
 
             if (duplicateEmployee)
             {
                 return IdentityResult.Failed(
                     new IdentityError
                     {
-                        Description = "Employee Number already exists."
+                        Description =
+                            "Employee Number already exists."
                     });
             }
 
@@ -153,23 +188,29 @@ namespace CaseManagementSystem.Services
             user.UserName = model.UserName.Trim();
             user.Email = model.Email.Trim();
 
-            var updateResult = await _userManager.UpdateAsync(user);
+            var updateResult =
+                await _userManager.UpdateAsync(user);
 
             if (!updateResult.Succeeded)
                 return updateResult;
 
-            var oldRoles = await _userManager.GetRolesAsync(user);
+            var oldRoles =
+                await _userManager.GetRolesAsync(user);
 
             if (oldRoles.Any())
             {
                 var removeResult =
-                    await _userManager.RemoveFromRolesAsync(user, oldRoles);
+                    await _userManager.RemoveFromRolesAsync(
+                        user,
+                        oldRoles);
 
                 if (!removeResult.Succeeded)
                     return removeResult;
             }
 
-            return await _userManager.AddToRoleAsync(user, model.Role);
+            return await _userManager.AddToRoleAsync(
+                user,
+                model.Role);
         }
     }
 }

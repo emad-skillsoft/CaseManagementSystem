@@ -17,9 +17,11 @@ namespace CaseManagementSystem.Controllers
             _userService = userService;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            return View(await _userService.GetUsersAsync());
+            var users = await _userService.GetUserListAsync();
+            return View(users);
         }
 
         [HttpGet]

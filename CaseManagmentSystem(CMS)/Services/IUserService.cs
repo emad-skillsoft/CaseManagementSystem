@@ -19,5 +19,7 @@ namespace CaseManagementSystem.Services
 
         Task<IdentityResult> UpdateUserAsync(
             EditUserViewModel model);
-    }
+
+		Task<List<UserListItemViewModel>> GetUserListAsync();
+	}
 }

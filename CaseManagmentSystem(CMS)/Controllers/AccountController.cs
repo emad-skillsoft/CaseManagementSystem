@@ -9,11 +9,14 @@ namespace CaseManagementSystem.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<Models.ApplicationUser> _signInManager;
+        private readonly UserManager<Models.ApplicationUser> _userManager;
 
         public AccountController(
-            SignInManager<Models.ApplicationUser> signInManager)
+            SignInManager<Models.ApplicationUser> signInManager,
+            UserManager<Models.ApplicationUser> userManager)
         {
             _signInManager = signInManager;
+            _userManager = userManager;
         }
 
         [AllowAnonymous]
@@ -39,6 +42,21 @@ namespace CaseManagementSystem.Controllers
 
             if (result.Succeeded)
             {
+                var user = await _userManager.FindByNameAsync(model.UserName);
+
+                if (user != null)
+                {
+                    if (await _userManager.IsInRoleAsync(user, "Supervisor"))
+                    {
+                        return RedirectToAction("Index", "Dashboard");
+                    }
+
+                    if (await _userManager.IsInRoleAsync(user, "Expert"))
+                    {
+                        return RedirectToAction("MyCases", "Cases");
+                    }
+                }
+
                 return RedirectToAction("Index", "Home");
             }
 

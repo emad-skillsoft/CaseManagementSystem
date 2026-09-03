@@ -1,286 +1,1670 @@
 ﻿@using CaseManagementSystem.Constants
+@using System.Globalization
 @model CaseManagementSystem.ViewModels.CaseDetailsViewModel
 
-<h2>Case Details</h2>
+@{
+    ViewData["Title"] = "Case Details";
 
-@if (TempData["CaseSuccess"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["CaseSuccess"]
-    </div>
-}
+    var isSupervisor = User.IsInRole(RoleNames.Supervisor);
+    var isExpert = User.IsInRole(RoleNames.Expert);
 
-@if (TempData["CaseError"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["CaseError"]
-    </div>
-}
+    var backAction = isSupervisor ? "Index" : "MyCases";
+    var backText = isSupervisor ? "Back to Cases" : "Back to My Cases";
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["Error"]
-    </div>
-}
+    var priorityCode = Model.Priority.ToString();
 
-<dl class="row">
-    <dt class="col-sm-3">External ID</dt>
-    <dd class="col-sm-9">@Model.ExternalCaseId</dd>
-
-    <dt class="col-sm-3">Title</dt>
-    <dd class="col-sm-9">@Model.Title</dd>
-
-    <dt class="col-sm-3">Description</dt>
-    <dd class="col-sm-9">@Model.Description</dd>
-
-    <dt class="col-sm-3">Priority</dt>
-    <dd class="col-sm-9">@Model.Priority</dd>
-
-    <dt class="col-sm-3">Stage</dt>
-    <dd class="col-sm-9">@Model.CurrentStage</dd>
-
-    <dt class="col-sm-3">Assigned Expert</dt>
-    <dd class="col-sm-9">@Model.AssignedExpertName</dd>
-
-    <dt class="col-sm-3">SLA Start</dt>
-    <dd class="col-sm-9">@Model.SLAStartDate</dd>
-</dl>
-
-<hr />
-
-<h4>History</h4>
-
-<table class="table table-sm">
-    <thead>
-        <tr>
-            <th>Time</th>
-            <th>Action</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Comment</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        @foreach (var h in Model.History)
-        {
-            <tr>
-                <td>@h.CreatedAt</td>
-                <td>@h.Action</td>
-                <td>@h.PreviousStage</td>
-                <td>@h.NewStage</td>
-                <td>@h.Comment</td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-@if (User.IsInRole(RoleNames.Expert)
-    && (Model.CurrentStage == WorkflowStageNames.Assigned
-        || Model.CurrentStage == WorkflowStageNames.InProgress))
-{
-    <div class="card mt-4">
-        <div class="card-header">
-            Add Update
-        </div>
-
-        <div class="card-body">
-            <form asp-action="AddUpdate" method="post">
-                <input type="hidden"
-                       name="CaseId"
-                       value="@Model.Id" />
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        Update
-                    </label>
-
-                    <textarea name="UpdateText"
-                              class="form-control"
-                              rows="3"
-                              required></textarea>
-                </div>
-
-                <button class="btn btn-primary"
-                        type="submit">
-                    Save Update
-                </button>
-            </form>
-        </div>
-    </div>
-}
-
-<div class="mt-4">
-    <h4>Updates</h4>
-
-    @foreach (var update in Model.Updates)
+    var priorityLabel = priorityCode switch
     {
-        <div class="border rounded p-2 mb-2">
-            <strong>@update.UserName</strong>
-            <small class="ms-2">
-                @update.CreatedAt
-            </small>
+        "P1" => "Critical",
+        "P2" => "High",
+        "P3" => "Medium",
+        "P4" => "Low",
+        _ => priorityCode
+    };
 
-            <div>
-                @update.UpdateText
-            </div>
+    var priorityClass = priorityCode switch
+    {
+        "P1" => "case-priority-p1",
+        "P2" => "case-priority-p2",
+        "P3" => "case-priority-p3",
+        "P4" => "case-priority-p4",
+        _ => "case-priority-default"
+    };
+
+    var stageLabel = Model.CurrentStage switch
+    {
+        WorkflowStageNames.Assigned => "Assigned",
+        WorkflowStageNames.InProgress => "In Progress",
+        WorkflowStageNames.Challenge => "Challenge",
+        WorkflowStageNames.CompletionPending => "Completion Pending",
+        WorkflowStageNames.Completed => "Completed",
+        _ => Model.CurrentStage
+    };
+
+    var stageClass = Model.CurrentStage switch
+    {
+        WorkflowStageNames.Assigned => "case-stage-assigned",
+        WorkflowStageNames.InProgress => "case-stage-progress",
+        WorkflowStageNames.Challenge => "case-stage-challenge",
+        WorkflowStageNames.CompletionPending => "case-stage-pending",
+        WorkflowStageNames.Completed => "case-stage-completed",
+        _ => "case-stage-default"
+    };
+
+    var lastUpdated = Model.ImportedAt;
+
+    if (Model.History.Any())
+    {
+        var lastHistory = Model.History.Max(x => x.CreatedAt);
+
+        if (lastHistory > lastUpdated)
+        {
+            lastUpdated = lastHistory;
+        }
+    }
+
+    if (Model.Updates.Any())
+    {
+        var lastUpdate = Model.Updates.Max(x => x.CreatedAt);
+
+        if (lastUpdate > lastUpdated)
+        {
+            lastUpdated = lastUpdate;
+        }
+    }
+
+    string FormatDate(DateTime date)
+    {
+        return date.ToString(
+            "dd MMM yyyy · hh:mm tt",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+    var canAddUpdate =
+        isExpert &&
+        (
+            Model.CurrentStage == WorkflowStageNames.Assigned ||
+            Model.CurrentStage == WorkflowStageNames.InProgress
+        );
+
+    var canReportChallenge =
+        isExpert &&
+        Model.CurrentStage == WorkflowStageNames.InProgress;
+
+    var canSubmitCompletion =
+        isExpert &&
+        Model.CurrentStage == WorkflowStageNames.InProgress;
+
+    var canResolveChallenge =
+        isSupervisor &&
+        Model.CurrentStage == WorkflowStageNames.Challenge;
+
+    var canReviewCompletion =
+        isSupervisor &&
+        Model.CurrentStage == WorkflowStageNames.CompletionPending;
+}
+
+
+<div class="case-workspace-v2">
+
+
+    <!-- =====================================================
+         BACK
+         ===================================================== -->
+
+    <div class="case-back-row">
+
+        <a asp-controller="Cases"
+           asp-action="@backAction"
+           class="case-back-link">
+
+            <svg viewBox="0 0 24 24">
+                <path d="M19 12H5"></path>
+                <path d="M12 19L5 12L12 5"></path>
+            </svg>
+
+            <span>@backText</span>
+
+        </a>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         MESSAGES
+         ===================================================== -->
+    @if (TempData["CaseSuccess"] != null)
+    {
+        <div class="case-message case-message-success">
+
+            <span class="case-message-icon">
+                ✓
+            </span>
+
+            <span>
+                @TempData["CaseSuccess"]
+            </span>
+
         </div>
     }
+
+    @if (TempData["CaseError"] != null)
+    {
+        <div class="case-message case-message-error">
+
+            <span class="case-message-icon">
+                !
+            </span>
+
+            <span>
+                @TempData["CaseError"]
+            </span>
+
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="case-message case-message-error">
+
+            <span class="case-message-icon">
+                !
+            </span>
+
+            <span>
+                @TempData["Error"]
+            </span>
+
+        </div>
+    }
+
+
+
+    <!-- =====================================================
+         PAGE GRID
+         ===================================================== -->
+
+    <div class="case-page-grid">
+
+
+        <!-- =================================================
+             LEFT / MAIN AREA
+             ================================================= -->
+
+        <div class="case-main-area">
+
+
+            <!-- =============================================
+                 CASE HEADER
+                 ============================================= -->
+
+            <section class="case-hero">
+
+                <div class="case-id-pill">
+                    @Model.ExternalCaseId
+                </div>
+
+
+                <h1 class="case-main-title">
+                    @Model.Title
+                </h1>
+
+
+                <div class="case-badge-row">
+
+
+                    <span class="case-badge @priorityClass">
+
+                        <span class="case-badge-dot"></span>
+
+                        @priorityCode @priorityLabel
+
+                    </span>
+
+
+                    <span class="case-badge @stageClass">
+
+                        <span class="case-badge-dot"></span>
+
+                        @stageLabel
+
+                    </span>
+
+
+                    <span class="case-badge case-monitor-badge">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                            <path d="M9 12l2 2 4-4"></path>
+
+                        </svg>
+
+                        Case record monitored
+
+                    </span>
+
+
+                </div>
+
+
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="case-description">
+
+                        @Model.Description
+
+                    </p>
+                }
+
+            </section>
+
+
+
+            <!-- =============================================
+                 CASE FACTS
+                 ============================================= -->
+
+            <section class="case-facts-card">
+
+
+                <!-- Assigned Expert -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <circle cx="12"
+                                    cy="7"
+                                    r="4">
+                            </circle>
+
+                            <path d="M4 21a8 8 0 0 1 16 0">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Assigned Expert
+                        </span>
+
+                        <strong>
+                            @Model.AssignedExpertName
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- SLA -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <circle cx="12"
+                                    cy="12"
+                                    r="9">
+                            </circle>
+
+                            <path d="M12 7v5l3 2">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            SLA Start
+                        </span>
+
+                        <strong>
+                            @FormatDate(Model.SLAStartDate)
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Priority -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 21V4">
+                            </path>
+
+                            <path d="M5 5h11l-2 4 2 4H5">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Priority
+                        </span>
+
+                        <strong>
+                            @priorityCode @priorityLabel
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Stage -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <circle cx="12"
+                                    cy="12"
+                                    r="9">
+                            </circle>
+
+                            <path d="M8 12l3 3 5-6">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Current Stage
+                        </span>
+
+                        <strong>
+                            @stageLabel
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Imported -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M12 3v12">
+                            </path>
+
+                            <path d="M7 10l5 5 5-5">
+                            </path>
+
+                            <path d="M5 19h14">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Imported
+                        </span>
+
+                        <strong>
+                            @FormatDate(Model.ImportedAt)
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Last Updated -->
+
+                <div class="case-fact">
+
+                    <div class="case-fact-icon">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <circle cx="12"
+                                    cy="12"
+                                    r="9">
+                            </circle>
+
+                            <path d="M12 8v4l4 2">
+                            </path>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Last Updated
+                        </span>
+
+                        <strong>
+                            @FormatDate(lastUpdated)
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+
+            <!-- =============================================
+                 WORK AREA
+                 ============================================= -->
+
+            <div class="case-work-grid">
+
+
+                <!-- =========================================
+                     ACTIVITY TIMELINE
+                     ========================================= -->
+
+                <section class="case-card case-timeline-card">
+
+
+                    <div class="case-card-header">
+
+
+                        <div class="case-card-title">
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 6h2"></path>
+                                <path d="M4 12h2"></path>
+                                <path d="M4 18h2"></path>
+
+                                <path d="M10 6h10"></path>
+                                <path d="M10 12h10"></path>
+                                <path d="M10 18h10"></path>
+
+                            </svg>
+
+
+                            <h2>
+                                Activity Timeline
+                            </h2>
+
+                        </div>
+
+
+                        <span class="case-count-badge">
+
+                            @Model.History.Count
+
+                        </span>
+
+
+                    </div>
+
+
+
+                    <div class="case-timeline">
+
+
+                        @if (Model.History.Any())
+                        {
+
+                            @foreach (var item in Model.History.OrderByDescending(x => x.CreatedAt))
+                            {
+
+                                <article class="case-timeline-item">
+
+
+                                    <div class="case-timeline-line">
+
+                                        <span class="case-timeline-dot">
+                                        </span>
+
+                                    </div>
+
+
+
+                                    <div class="case-timeline-content">
+
+
+                                        <time>
+
+                                            @FormatDate(item.CreatedAt)
+
+                                        </time>
+
+
+                                        <strong>
+
+                                            @item.Action
+
+                                        </strong>
+
+
+
+                                        @if (
+                                            !string.IsNullOrWhiteSpace(item.PreviousStage) ||
+                                            !string.IsNullOrWhiteSpace(item.NewStage)
+                                        )
+                                        {
+
+                                            <div class="case-transition">
+
+
+                                                @if (!string.IsNullOrWhiteSpace(item.PreviousStage))
+                                                {
+                                                    <span>
+                                                        @item.PreviousStage
+                                                    </span>
+                                                }
+
+
+                                                @if (!string.IsNullOrWhiteSpace(item.NewStage))
+                                                {
+
+                                                    <svg viewBox="0 0 24 24">
+
+                                                        <path d="M5 12h14">
+                                                        </path>
+
+                                                        <path d="M13 6l6 6-6 6">
+                                                        </path>
+
+                                                    </svg>
+
+                                                    <span>
+                                                        @item.NewStage
+                                                    </span>
+
+                                                }
+
+
+                                            </div>
+
+                                        }
+
+
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Comment))
+                                        {
+
+                                            <p>
+                                                @item.Comment
+                                            </p>
+
+                                        }
+
+
+                                    </div>
+
+
+                                </article>
+
+                            }
+
+                        }
+
+                        else
+                        {
+
+                            <div class="case-empty-state">
+
+                                <strong>
+                                    No activity recorded
+                                </strong>
+
+                                <span>
+                                    Workflow events will appear here.
+                                </span>
+
+                            </div>
+
+                        }
+
+
+                    </div>
+
+
+                </section>
+
+
+
+                <!-- =========================================
+                     CASE UPDATES - PRIMARY WORK AREA
+                     ========================================= -->
+
+                <section class="case-card case-updates-card"
+                         id="caseUpdatesSection">
+
+
+                    <div class="case-card-header case-update-header">
+
+
+                        <div class="case-card-title">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 19.5V15l11-11a2.1 2.1 0 0 1 3 3L7 18H4z">
+                                </path>
+
+                                <path d="M13.5 5.5l3 3">
+                                </path>
+
+                            </svg>
+
+
+                            <div>
+
+                                <h2>
+                                    Case Updates
+                                </h2>
+
+                                <small>
+                                    Primary work log for this case
+                                </small>
+
+                            </div>
+
+
+                        </div>
+
+
+                        <span class="case-count-badge">
+
+                            @Model.Updates.Count
+
+                        </span>
+
+
+                    </div>
+
+
+
+                    <!-- =====================================
+                         ADD UPDATE
+                         ===================================== -->
+                    @if (canAddUpdate)
+                    {
+
+                        <div class="case-update-composer">
+
+
+                            <div class="case-update-composer-top">
+
+
+                                <div>
+
+                                    <strong>
+                                        Add Case Update
+                                    </strong>
+
+                                    <span>
+                                        Record progress, findings, or actions taken.
+                                    </span>
+
+                                </div>
+
+
+                                @if (Model.CurrentStage == WorkflowStageNames.Assigned)
+                                {
+
+                                    <span class="case-start-work-pill">
+
+                                        First update starts work
+
+                                    </span>
+
+                                }
+
+
+                            </div>
+
+
+
+                            <form asp-action="AddUpdate"
+                                  method="post">
+
+
+                                @Html.AntiForgeryToken()
+
+
+                                <input type="hidden"
+                                       name="CaseId"
+                                       value="@Model.Id" />
+
+
+                                <textarea name="UpdateText"
+                                          class="case-textarea case-update-textarea"
+                                          rows="4"
+                                          placeholder="Enter update details..."
+                                          required></textarea>
+
+
+                                <div class="case-update-composer-bottom">
+
+
+                                    <span>
+
+                                        This update will be recorded in the case history.
+
+                                    </span>
+
+
+                                    <button type="submit"
+                                            class="case-button case-button-primary">
+
+
+                                        <svg viewBox="0 0 24 24">
+
+                                            <path d="M5 5h14v14H5z">
+                                            </path>
+
+                                            <path d="M8 5v6h8V5">
+                                            </path>
+
+                                            <path d="M8 19v-5h8v5">
+                                            </path>
+
+                                        </svg>
+
+
+                                        Save Update
+
+
+                                    </button>
+
+
+                                </div>
+
+
+                            </form>
+
+
+                        </div>
+
+                    }
+
+
+
+                    <!-- =====================================
+                         UPDATE LIST
+                         ===================================== -->
+
+                    <div class="case-update-list">
+
+
+                        @if (Model.Updates.Any())
+                        {
+
+                            var updateNumber = 0;
+
+
+                            @foreach (var update in Model.Updates.OrderByDescending(x => x.CreatedAt))
+                            {
+
+                                updateNumber++;
+
+
+                                var firstLetter =
+                                    string.IsNullOrWhiteSpace(update.UserName)
+                                        ? "U"
+                                        : update.UserName.Substring(0, 1).ToUpper();
+
+
+                                <article class="case-update-entry @(updateNumber == 1 ? "case-update-entry-latest" : "")">
+
+
+                                    <div class="case-update-avatar">
+
+                                        @firstLetter
+
+                                    </div>
+
+
+
+                                    <div class="case-update-body">
+
+
+                                        <div class="case-update-meta">
+
+
+                                            <div>
+
+                                                <strong>
+                                                    @update.UserName
+                                                </strong>
+
+                                                <time>
+                                                    @FormatDate(update.CreatedAt)
+                                                </time>
+
+                                            </div>
+
+
+                                            @if (updateNumber == 1)
+                                            {
+
+                                                <span class="case-latest-pill">
+
+                                                    Latest
+
+                                                </span>
+
+                                            }
+
+
+                                        </div>
+
+
+                                        <p>
+                                            @update.UpdateText
+                                        </p>
+
+
+                                    </div>
+
+
+                                </article>
+
+                            }
+
+                        }
+
+                        else
+                        {
+
+                            <div class="case-empty-state">
+
+                                <strong>
+                                    No case updates yet
+                                </strong>
+
+                                <span>
+                                    Expert updates will appear here.
+                                </span>
+
+                            </div>
+
+                        }
+
+
+                    </div>
+
+
+                </section>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             RIGHT SIDEBAR
+             ================================================= -->
+
+        <aside class="case-right-area">
+
+
+            <!-- =============================================
+                 ACTIONS
+                 ============================================= -->
+
+            <section class="case-card case-actions-card">
+
+
+                <div class="case-card-header">
+
+
+                    <div class="case-card-title">
+
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M13 2L5 14h6l-1 8 9-13h-6z">
+                            </path>
+
+                        </svg>
+
+
+                        <h2>
+                            Case Actions
+                        </h2>
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <div class="case-action-list">
+
+
+                    <!-- ADD UPDATE ACTION -->
+                    @if (canAddUpdate)
+                    {
+
+                        <button type="button"
+                                class="case-action-item case-action-update"
+                                onclick="document.getElementById('caseUpdatesSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });">
+
+
+                            <span class="case-action-icon">
+
+
+                                <svg viewBox="0 0 24 24">
+
+                                    <path d="M4 19.5V15l11-11a2.1 2.1 0 0 1 3 3L7 18H4z">
+                                    </path>
+
+                                    <path d="M13.5 5.5l3 3">
+                                    </path>
+
+                                </svg>
+
+
+                            </span>
+
+
+
+                            <span class="case-action-text">
+
+
+                                <strong>
+                                    Add Update
+                                </strong>
+
+                                <small>
+                                    Record progress or case notes
+                                </small>
+
+
+                            </span>
+
+
+
+                            <svg class="case-action-arrow"
+                                 viewBox="0 0 24 24">
+
+                                <path d="M9 18l6-6-6-6">
+                                </path>
+
+                            </svg>
+
+
+                        </button>
+
+                    }
+
+
+
+                    <!-- REPORT CHALLENGE -->
+                    @if (canReportChallenge)
+                    {
+
+                        <details class="case-action-panel case-action-warning">
+
+
+                            <summary>
+
+
+                                <span class="case-action-icon">
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <path d="M12 3l10 18H2L12 3z">
+                                        </path>
+
+                                        <path d="M12 9v5">
+                                        </path>
+
+                                        <path d="M12 18h.01">
+                                        </path>
+
+                                    </svg>
+
+
+                                </span>
+
+
+
+                                <span class="case-action-text">
+
+
+                                    <strong>
+                                        Report Challenge
+                                    </strong>
+
+                                    <small>
+                                        Escalate an issue blocking progress
+                                    </small>
+
+
+                                </span>
+
+
+
+                                <svg class="case-action-arrow"
+                                     viewBox="0 0 24 24">
+
+                                    <path d="M9 18l6-6-6-6">
+                                    </path>
+
+                                </svg>
+
+
+                            </summary>
+
+
+
+                            <div class="case-action-form">
+
+
+                                <form asp-action="StartChallenge"
+                                      method="post">
+
+
+                                    @Html.AntiForgeryToken()
+
+
+                                    <input type="hidden"
+                                           name="CaseId"
+                                           value="@Model.Id" />
+
+
+                                    <label>
+                                        Challenge Reason
+                                    </label>
+
+
+                                    <textarea name="Reason"
+                                              class="case-textarea"
+                                              rows="4"
+                                              placeholder="Explain what is blocking progress..."
+                                              required></textarea>
+
+
+                                    <button type="submit"
+                                            class="case-button case-button-warning case-button-full">
+
+                                        Report Challenge
+
+                                    </button>
+
+
+                                </form>
+
+
+                            </div>
+
+
+                        </details>
+
+                    }
+
+
+
+                    <!-- SUBMIT COMPLETION -->
+                    @if (canSubmitCompletion)
+                    {
+
+                        <details class="case-action-panel case-action-success">
+
+
+                            <summary>
+
+
+                                <span class="case-action-icon">
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <circle cx="12"
+                                                cy="12"
+                                                r="9">
+                                        </circle>
+
+                                        <path d="M8 12l3 3 5-6">
+                                        </path>
+
+                                    </svg>
+
+
+                                </span>
+
+
+
+                                <span class="case-action-text">
+
+
+                                    <strong>
+                                        Submit Completion
+                                    </strong>
+
+                                    <small>
+                                        Send the case for supervisor review
+                                    </small>
+
+
+                                </span>
+
+
+
+                                <svg class="case-action-arrow"
+                                     viewBox="0 0 24 24">
+
+                                    <path d="M9 18l6-6-6-6">
+                                    </path>
+
+                                </svg>
+
+
+                            </summary>
+
+
+
+                            <div class="case-action-form">
+
+
+                                <form asp-action="SubmitCompletion"
+                                      method="post">
+
+
+                                    @Html.AntiForgeryToken()
+
+
+                                    <input type="hidden"
+                                           name="CaseId"
+                                           value="@Model.Id" />
+
+
+                                    <label>
+                                        Completion Summary
+                                    </label>
+
+
+                                    <textarea name="CompletionSummary"
+                                              class="case-textarea"
+                                              rows="4"
+                                              placeholder="Summarize the completed work and outcome..."
+                                              required></textarea>
+
+
+                                    <button type="submit"
+                                            class="case-button case-button-success case-button-full">
+
+                                        Submit for Review
+
+                                    </button>
+
+
+                                </form>
+
+
+                            </div>
+
+
+                        </details>
+
+                    }
+
+
+
+                    <!-- SUPERVISOR RESOLVE CHALLENGE -->
+                    @if (canResolveChallenge)
+                    {
+
+                        <details class="case-action-panel case-action-warning"
+                                 open>
+
+
+                            <summary>
+
+
+                                <span class="case-action-icon">
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <path d="M12 3l10 18H2L12 3z">
+                                        </path>
+
+                                        <path d="M12 9v5">
+                                        </path>
+
+                                        <path d="M12 18h.01">
+                                        </path>
+
+                                    </svg>
+
+
+                                </span>
+
+
+
+                                <span class="case-action-text">
+
+
+                                    <strong>
+                                        Resolve Challenge
+                                    </strong>
+
+                                    <small>
+                                        Return the case to the same Expert
+                                    </small>
+
+
+                                </span>
+
+
+
+                                <svg class="case-action-arrow"
+                                     viewBox="0 0 24 24">
+
+                                    <path d="M9 18l6-6-6-6">
+                                    </path>
+
+                                </svg>
+
+
+                            </summary>
+
+
+
+                            <div class="case-action-form">
+
+
+                                <form asp-action="ResolveChallenge"
+                                      method="post">
+
+
+                                    @Html.AntiForgeryToken()
+
+
+                                    <input type="hidden"
+                                           name="CaseId"
+                                           value="@Model.Id" />
+
+
+                                    <label>
+                                        Supervisor Comment
+                                    </label>
+
+
+                                    <textarea name="SupervisorComment"
+                                              class="case-textarea"
+                                              rows="4"
+                                              placeholder="Provide resolution details..."
+                                              required></textarea>
+
+
+                                    <button type="submit"
+                                            class="case-button case-button-primary case-button-full">
+
+                                        Resolve Challenge
+
+                                    </button>
+
+
+                                </form>
+
+
+                            </div>
+
+
+                        </details>
+
+                    }
+
+
+
+                    <!-- SUPERVISOR COMPLETION -->
+                    @if (canReviewCompletion)
+                    {
+
+                        <div class="case-completion-review">
+
+
+                            <div class="case-review-heading">
+
+
+                                <span class="case-action-icon">
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <circle cx="12"
+                                                cy="12"
+                                                r="9">
+                                        </circle>
+
+                                        <path d="M8 12l3 3 5-6">
+                                        </path>
+
+                                    </svg>
+
+
+                                </span>
+
+
+
+                                <div>
+
+
+                                    <strong>
+                                        Completion Review
+                                    </strong>
+
+                                    <small>
+                                        Approve or return the case
+                                    </small>
+
+
+                                </div>
+
+
+                            </div>
+
+
+
+                            <!-- APPROVE -->
+
+                            <form asp-action="ApproveCompletion"
+                                  method="post">
+
+
+                                @Html.AntiForgeryToken()
+
+
+                                <input type="hidden"
+                                       name="caseId"
+                                       value="@Model.Id" />
+
+
+                                <button type="submit"
+                                        class="case-button case-button-success case-button-full">
+
+                                    Approve Completion
+
+                                </button>
+
+
+                            </form>
+
+
+
+                            <div class="case-or">
+
+                                OR
+
+                            </div>
+
+
+
+                            <!-- RETURN -->
+
+                            <form asp-action="ReturnToWork"
+                                  method="post">
+
+
+                                @Html.AntiForgeryToken()
+
+
+                                <input type="hidden"
+                                       name="caseId"
+                                       value="@Model.Id" />
+
+
+                                <label>
+                                    Return Reason
+                                </label>
+
+
+                                <textarea name="reason"
+                                          class="case-textarea"
+                                          rows="4"
+                                          placeholder="Explain what requires additional work..."
+                                          required></textarea>
+
+
+                                <button type="submit"
+                                        class="case-button case-button-warning case-button-full">
+
+                                    Return to Expert
+
+                                </button>
+
+
+                            </form>
+
+
+                        </div>
+
+                    }
+
+
+
+                    <!-- NO ACTION -->
+                    @if (
+                                            !canAddUpdate &&
+                                            !canReportChallenge &&
+                                            !canSubmitCompletion &&
+                                            !canResolveChallenge &&
+                                            !canReviewCompletion
+                                        )
+                    {
+
+                        <div class="case-no-actions">
+
+
+                            <span>
+                                ✓
+                            </span>
+
+
+                            <strong>
+                                No action required
+                            </strong>
+
+
+                            @if (Model.CurrentStage == WorkflowStageNames.Completed)
+                            {
+                                <small>
+                                    This case has been completed.
+                                </small>
+                            }
+
+                            else if (Model.CurrentStage == WorkflowStageNames.Challenge)
+                            {
+                                <small>
+                                    Challenge is awaiting Supervisor resolution.
+                                </small>
+                            }
+
+                            else if (Model.CurrentStage == WorkflowStageNames.CompletionPending)
+                            {
+                                <small>
+                                    Completion is awaiting Supervisor review.
+                                </small>
+                            }
+
+                            else
+                            {
+                                <small>
+                                    No workflow action is available at this stage.
+                                </small>
+                            }
+
+
+                        </div>
+
+                    }
+
+
+                </div>
+
+
+            </section>
+
+
+
+            <!-- =============================================
+                 CASE SUMMARY
+                 ============================================= -->
+
+            <section class="case-card case-summary-card">
+
+
+                <div class="case-card-header">
+
+
+                    <div class="case-card-title">
+
+
+                        <h2>
+                            Case Summary
+                        </h2>
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <dl class="case-summary-list">
+
+
+                    <div>
+
+                        <dt>
+                            Case ID
+                        </dt>
+
+                        <dd>
+                            @Model.ExternalCaseId
+                        </dd>
+
+                    </div>
+
+
+                    <div>
+
+                        <dt>
+                            Priority
+                        </dt>
+
+                        <dd>
+
+                            <span class="case-summary-status @priorityClass">
+
+                                @priorityCode @priorityLabel
+
+                            </span>
+
+                        </dd>
+
+                    </div>
+
+
+                    <div>
+
+                        <dt>
+                            Stage
+                        </dt>
+
+                        <dd>
+
+                            <span class="case-summary-status @stageClass">
+
+                                @stageLabel
+
+                            </span>
+
+                        </dd>
+
+                    </div>
+
+
+                    <div>
+
+                        <dt>
+                            Assigned Expert
+                        </dt>
+
+                        <dd>
+                            @Model.AssignedExpertName
+                        </dd>
+
+                    </div>
+
+
+                    <div>
+
+                        <dt>
+                            SLA Start
+                        </dt>
+
+                        <dd>
+                            @FormatDate(Model.SLAStartDate)
+                        </dd>
+
+                    </div>
+
+
+                </dl>
+
+
+            </section>
+
+
+        </aside>
+
+
+    </div>
+
+
 </div>
-
-@if (User.IsInRole(RoleNames.Expert)
-    && Model.CurrentStage == WorkflowStageNames.InProgress)
-{
-    <div class="card mt-4">
-        <div class="card-header">
-            Start Challenge
-        </div>
-
-        <div class="card-body">
-            <form asp-action="StartChallenge" method="post">
-                <input type="hidden"
-                       name="CaseId"
-                       value="@Model.Id" />
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        Challenge Reason
-                    </label>
-
-                    <textarea name="Reason"
-                              class="form-control"
-                              rows="3"
-                              required></textarea>
-                </div>
-
-                <button class="btn btn-warning"
-                        type="submit">
-                    I Have a Challenge
-                </button>
-            </form>
-        </div>
-    </div>
-}
-
-@if (User.IsInRole(RoleNames.Supervisor)
-    && Model.CurrentStage == WorkflowStageNames.Challenge)
-{
-    <div class="card mt-4">
-        <div class="card-header">
-            Resolve Challenge
-        </div>
-
-        <div class="card-body">
-            <form asp-action="ResolveChallenge" method="post">
-                <input type="hidden"
-                       name="CaseId"
-                       value="@Model.Id" />
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        Supervisor Comment
-                    </label>
-
-                    <textarea name="SupervisorComment"
-                              class="form-control"
-                              rows="3"
-                              required></textarea>
-                </div>
-
-                <button class="btn btn-success"
-                        type="submit">
-                    Resolve Challenge
-                </button>
-            </form>
-        </div>
-    </div>
-}
-
-@if (User.IsInRole(RoleNames.Expert)
-    && Model.CurrentStage == WorkflowStageNames.InProgress)
-{
-    <div class="card mt-4">
-        <div class="card-header">
-            Submit Completion
-        </div>
-
-        <div class="card-body">
-            <form asp-action="SubmitCompletion"
-                  method="post">
-
-                <input type="hidden"
-                       name="CaseId"
-                       value="@Model.Id" />
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        Completion Summary
-                    </label>
-
-                    <textarea name="CompletionSummary"
-                              class="form-control"
-                              rows="4"
-                              required></textarea>
-                </div>
-
-                <button type="submit"
-                        class="btn btn-success">
-                    Submit Completion
-                </button>
-            </form>
-        </div>
-    </div>
-}
-
-@if (User.IsInRole(RoleNames.Supervisor)
-    && Model.CurrentStage == WorkflowStageNames.CompletionPending)
-{
-    <div class="card mt-4">
-        <div class="card-header">
-            Supervisor Completion Review
-        </div>
-
-        <div class="card-body">
-
-            <form asp-action="ApproveCompletion"
-                  method="post"
-                  class="mb-3">
-
-                <input type="hidden"
-                       name="caseId"
-                       value="@Model.Id" />
-
-                <button type="submit"
-                        class="btn btn-success">
-                    Approve Completion
-                </button>
-            </form>
-
-            <form asp-action="ReturnToWork"
-                  method="post">
-
-                <input type="hidden"
-                       name="caseId"
-                       value="@Model.Id" />
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        Return Reason
-                    </label>
-
-                    <textarea name="reason"
-                              class="form-control"
-                              rows="3"
-                              required></textarea>
-                </div>
-
-                <button type="submit"
-                        class="btn btn-warning">
-                    Return to Work
-                </button>
-            </form>
-
-        </div>
-    </div>
-}

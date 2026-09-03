@@ -1,27 +1,1237 @@
-﻿@model IEnumerable<CaseManagementSystem.ViewModels.CaseListViewModel>
+﻿@using CaseManagementSystem.Constants
+@using System.Globalization
+@model List<CaseManagementSystem.ViewModels.CaseListViewModel>
 
-<h2>My Cases</h2>
+@{
+    ViewData["Title"] = "My Cases";
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>External ID</th>
-            <th>Title</th>
-            <th>Priority</th>
-            <th>Stage</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var c in Model)
+    string PriorityLabel(object priority)
+    {
+        var code = priority?.ToString() ?? "";
+
+        return code switch
         {
-            <tr>
-                <td>@c.ExternalCaseId</td>
-                <td>@c.Title</td>
-                <td>@c.Priority</td>
-                <td>@c.CurrentStage</td>
-                <td><a asp-action="Details" asp-route-id="@c.Id">Details</a></td>
-            </tr>
+            "P1" => "Critical",
+            "P2" => "High",
+            "P3" => "Medium",
+            "P4" => "Low",
+            _ => code
+        };
+    }
+
+    string PriorityClass(object priority)
+    {
+        var code = priority?.ToString() ?? "";
+
+        return code switch
+        {
+            "P1" => "case-list-priority-p1",
+            "P2" => "case-list-priority-p2",
+            "P3" => "case-list-priority-p3",
+            "P4" => "case-list-priority-p4",
+            _ => "case-list-priority-default"
+        };
+    }
+
+    string StageLabel(string stage)
+    {
+        return stage switch
+        {
+            WorkflowStageNames.Assigned => "Assigned",
+            WorkflowStageNames.InProgress => "In Progress",
+            WorkflowStageNames.Challenge => "Challenge",
+            WorkflowStageNames.CompletionPending => "Completion Pending",
+            WorkflowStageNames.Completed => "Completed",
+            _ => stage
+        };
+    }
+
+    string StageClass(string stage)
+    {
+        return stage switch
+        {
+            WorkflowStageNames.Assigned => "case-list-stage-assigned",
+            WorkflowStageNames.InProgress => "case-list-stage-progress",
+            WorkflowStageNames.Challenge => "case-list-stage-challenge",
+            WorkflowStageNames.CompletionPending => "case-list-stage-pending",
+            WorkflowStageNames.Completed => "case-list-stage-completed",
+            _ => "case-list-stage-default"
+        };
+    }
+
+    string FormatDate(DateTime date)
+    {
+        return date.ToString(
+            "dd MMM yyyy",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+    string FormatTime(DateTime date)
+    {
+        return date.ToString(
+            "hh:mm tt",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+    var totalCases = Model.Count;
+
+    var inProgressCount =
+        Model.Count(x =>
+            x.CurrentStage == WorkflowStageNames.InProgress
+        );
+
+    var challengeCount =
+        Model.Count(x =>
+            x.CurrentStage == WorkflowStageNames.Challenge
+        );
+
+    var completedCount =
+        Model.Count(x =>
+            x.CurrentStage == WorkflowStageNames.Completed
+        );
+}
+
+
+<div class="case-list-page">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="case-list-page-header">
+
+
+        <div>
+
+
+            <h1>
+                My Cases
+            </h1>
+
+
+            <p>
+                Review and manage cases assigned to you.
+            </p>
+
+
+        </div>
+
+
+
+        <div class="case-list-total-card">
+
+
+            <svg viewBox="0 0 24 24">
+
+                <path d="M4 7h6l2 2h8v10H4z">
+                </path>
+
+                <path d="M4 7V5h6l2 2">
+                </path>
+
+            </svg>
+
+
+            <strong>
+                @totalCases
+            </strong>
+
+
+            <span>
+                Cases
+            </span>
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- =====================================================
+         FILTERS
+         ===================================================== -->
+
+    <section class="case-list-toolbar">
+
+
+        <div class="case-list-filter-row case-list-filter-row-expert">
+
+
+            <!-- SEARCH -->
+
+            <div class="case-list-search">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="11"
+                            cy="11"
+                            r="7">
+                    </circle>
+
+                    <path d="M20 20l-4-4">
+                    </path>
+
+                </svg>
+
+
+                <input id="caseSearch"
+                       type="search"
+                       placeholder="Search by Case ID or title..."
+                       autocomplete="off" />
+
+
+            </div>
+
+
+
+            <!-- STATUS -->
+
+            <label class="case-list-select">
+
+
+                <span>
+                    Status
+                </span>
+
+
+                <select id="caseStatusFilter">
+
+
+                    <option value="">
+                        All Statuses
+                    </option>
+
+
+                    <option value="@WorkflowStageNames.Assigned">
+                        Assigned
+                    </option>
+
+
+                    <option value="@WorkflowStageNames.InProgress">
+                        In Progress
+                    </option>
+
+
+                    <option value="@WorkflowStageNames.Challenge">
+                        Challenge
+                    </option>
+
+
+                    <option value="@WorkflowStageNames.CompletionPending">
+                        Completion Pending
+                    </option>
+
+
+                    <option value="@WorkflowStageNames.Completed">
+                        Completed
+                    </option>
+
+
+                </select>
+
+
+            </label>
+
+
+
+            <!-- PRIORITY -->
+
+            <label class="case-list-select">
+
+
+                <span>
+                    Priority
+                </span>
+
+
+                <select id="casePriorityFilter">
+
+
+                    <option value="">
+                        All Priorities
+                    </option>
+
+
+                    <option value="P1">
+                        P1 Critical
+                    </option>
+
+
+                    <option value="P2">
+                        P2 High
+                    </option>
+
+
+                    <option value="P3">
+                        P3 Medium
+                    </option>
+
+
+                    <option value="P4">
+                        P4 Low
+                    </option>
+
+
+                </select>
+
+
+            </label>
+
+
+
+            <!-- CLEAR -->
+
+            <button type="button"
+                    id="caseClearFilters"
+                    class="case-list-clear">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <path d="M3 12a9 9 0 1 0 3-6.7">
+                    </path>
+
+                    <path d="M3 4v6h6">
+                    </path>
+
+                </svg>
+
+
+                Clear Filters
+
+
+            </button>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             SUMMARY
+             ================================================= -->
+
+        <div class="case-list-summary">
+
+
+            <!-- TOTAL -->
+
+            <div>
+
+
+                <span class="case-list-summary-icon case-list-summary-total">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M4 7h6l2 2h8v10H4z">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <strong>
+                    @totalCases
+                </strong>
+
+
+                <span>
+                    Total
+                </span>
+
+
+            </div>
+
+
+
+            <!-- IN PROGRESS -->
+
+            <div>
+
+
+                <span class="case-list-summary-icon case-list-summary-progress">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M3 12h4l2-6 4 12 2-6h6">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <strong>
+                    @inProgressCount
+                </strong>
+
+
+                <span>
+                    In Progress
+                </span>
+
+
+            </div>
+
+
+
+            <!-- CHALLENGE -->
+
+            <div>
+
+
+                <span class="case-list-summary-icon case-list-summary-challenge">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M12 3l10 18H2z">
+                        </path>
+
+                        <path d="M12 9v5">
+                        </path>
+
+                        <path d="M12 18h.01">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <strong>
+                    @challengeCount
+                </strong>
+
+
+                <span>
+                    Challenge
+                </span>
+
+
+            </div>
+
+
+
+            <!-- COMPLETED -->
+
+            <div>
+
+
+                <span class="case-list-summary-icon case-list-summary-completed">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M8 12l3 3 5-6">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <strong>
+                    @completedCount
+                </strong>
+
+
+                <span>
+                    Completed
+                </span>
+
+
+            </div>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         TABLE
+         ===================================================== -->
+
+    <section class="case-list-table-card">
+
+
+        <div class="table-responsive">
+
+
+            <table class="case-list-table"
+                   id="caseTable">
+
+
+                <thead>
+
+
+                    <tr>
+
+
+                        <th>
+                            Case
+                        </th>
+
+
+                        <th>
+                            Priority
+                        </th>
+
+
+                        <th>
+                            Status
+                        </th>
+
+
+                        <th>
+                            SLA Start
+                        </th>
+
+
+                        <th>
+                            Action
+                        </th>
+
+
+                    </tr>
+
+
+                </thead>
+
+
+
+                <tbody id="caseTableBody">
+
+
+                    @foreach (var item in Model)
+                    {
+
+                        var priorityCode =
+                            item.Priority.ToString();
+
+
+                        var priorityLabel =
+                            PriorityLabel(item.Priority);
+
+
+                        var stageLabel =
+                            StageLabel(item.CurrentStage);
+
+
+                        <tr class="case-list-row"
+                            data-case-id="@item.ExternalCaseId.ToLowerInvariant()"
+                            data-title="@item.Title.ToLowerInvariant()"
+                            data-status="@item.CurrentStage"
+                            data-priority="@priorityCode">
+
+
+                            <!-- CASE -->
+
+                            <td class="case-list-case-cell">
+
+
+                                <span class="case-list-folder">
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <path d="M3 6h7l2 2h9v11H3z">
+                                        </path>
+
+                                    </svg>
+
+
+                                </span>
+
+
+
+                                <div>
+
+
+                                    <strong>
+                                        @item.ExternalCaseId
+                                    </strong>
+
+
+                                    <span>
+                                        @item.Title
+                                    </span>
+
+
+                                </div>
+
+
+                            </td>
+
+
+
+                            <!-- PRIORITY -->
+
+                            <td>
+
+
+                                <span class="case-list-badge @PriorityClass(item.Priority)">
+
+
+                                    <span class="case-list-badge-dot">
+                                    </span>
+
+
+                                    @priorityCode @priorityLabel
+
+
+                                </span>
+
+
+                            </td>
+
+
+
+                            <!-- STATUS -->
+
+                            <td>
+
+
+                                <span class="case-list-badge @StageClass(item.CurrentStage)">
+
+
+                                    <span class="case-list-badge-dot">
+                                    </span>
+
+
+                                    @stageLabel
+
+
+                                </span>
+
+
+                            </td>
+
+
+
+                            <!-- SLA -->
+
+                            <td>
+
+
+                                <div class="case-list-date">
+
+
+                                    <strong>
+                                        @FormatDate(item.SLAStartDate)
+                                    </strong>
+
+
+                                    <span>
+                                        @FormatTime(item.SLAStartDate)
+                                    </span>
+
+
+                                </div>
+
+
+                            </td>
+
+
+
+                            <!-- ACTION -->
+
+                            <td>
+
+
+                                <a asp-controller="Cases"
+                                   asp-action="Details"
+                                   asp-route-id="@item.Id"
+                                   class="case-list-view-button">
+
+
+                                    View Case
+
+
+                                    <svg viewBox="0 0 24 24">
+
+                                        <path d="M5 12h14">
+                                        </path>
+
+                                        <path d="M13 6l6 6-6 6">
+                                        </path>
+
+                                    </svg>
+
+
+                                </a>
+
+
+                            </td>
+
+
+                        </tr>
+
+                    }
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             EMPTY
+             ================================================= -->
+
+        <div id="caseEmptyState"
+             class="case-list-empty"
+             hidden>
+
+
+            <strong>
+                No cases found
+            </strong>
+
+
+            <span>
+                Try changing your search or filters.
+            </span>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             PAGINATION
+             ================================================= -->
+
+        <footer class="case-list-footer">
+
+
+            <span id="caseResultsText">
+
+                Showing @Math.Min(totalCases, 10) of @totalCases cases
+
+            </span>
+
+
+
+            <div class="case-list-pagination">
+
+
+                <button type="button"
+                        id="casePrevPage"
+                        aria-label="Previous page">
+
+                    ‹
+
+                </button>
+
+
+
+                <div id="casePageNumbers">
+                </div>
+
+
+
+                <button type="button"
+                        id="caseNextPage"
+                        aria-label="Next page">
+
+                    ›
+
+                </button>
+
+
+
+                <select id="casePageSize"
+                        aria-label="Cases per page">
+
+
+                    <option value="10"
+                            selected>
+
+                        10 / page
+
+                    </option>
+
+
+                    <option value="20">
+
+                        20 / page
+
+                    </option>
+
+
+                    <option value="50">
+
+                        50 / page
+
+                    </option>
+
+
+                </select>
+
+
+            </div>
+
+
+        </footer>
+
+
+    </section>
+
+
+</div>
+
+
+
+<script>
+
+    (() => {
+
+
+        const rows =
+            Array.from(
+                document.querySelectorAll(
+                    "#caseTableBody .case-list-row"
+                )
+            );
+
+
+        const search =
+            document.getElementById(
+                "caseSearch"
+            );
+
+
+        const status =
+            document.getElementById(
+                "caseStatusFilter"
+            );
+
+
+        const priority =
+            document.getElementById(
+                "casePriorityFilter"
+            );
+
+
+        const clear =
+            document.getElementById(
+                "caseClearFilters"
+            );
+
+
+        const resultsText =
+            document.getElementById(
+                "caseResultsText"
+            );
+
+
+        const emptyState =
+            document.getElementById(
+                "caseEmptyState"
+            );
+
+
+        const table =
+            document.getElementById(
+                "caseTable"
+            );
+
+
+        const previousButton =
+            document.getElementById(
+                "casePrevPage"
+            );
+
+
+        const nextButton =
+            document.getElementById(
+                "caseNextPage"
+            );
+
+
+        const pageNumbers =
+            document.getElementById(
+                "casePageNumbers"
+            );
+
+
+        const pageSizeSelect =
+            document.getElementById(
+                "casePageSize"
+            );
+
+
+        let currentPage = 1;
+
+
+        let pageSize =
+            Number(
+                pageSizeSelect.value
+            );
+
+
+
+        function getFilteredRows() {
+
+
+            const query =
+                search.value
+                    .trim()
+                    .toLowerCase();
+
+
+
+            return rows.filter(row => {
+
+
+                const matchesSearch =
+                    !query ||
+                    row.dataset.caseId.includes(query) ||
+                    row.dataset.title.includes(query);
+
+
+                const matchesStatus =
+                    !status.value ||
+                    row.dataset.status === status.value;
+
+
+                const matchesPriority =
+                    !priority.value ||
+                    row.dataset.priority === priority.value;
+
+
+
+                return (
+                    matchesSearch &&
+                    matchesStatus &&
+                    matchesPriority
+                );
+
+            });
+
         }
-    </tbody>
-</table>
+
+
+
+        function renderPageNumbers(totalPages) {
+
+
+            pageNumbers.innerHTML = "";
+
+
+            for (
+                let page = 1;
+                page <= totalPages;
+                page++
+            ) {
+
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                button.type =
+                    "button";
+
+
+                button.textContent =
+                    page;
+
+
+                if (
+                    page === currentPage
+                ) {
+
+                    button.classList.add(
+                        "active"
+                    );
+
+                }
+
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        currentPage =
+                            page;
+
+                        render();
+
+                    }
+                );
+
+
+                pageNumbers.appendChild(
+                    button
+                );
+
+            }
+
+        }
+
+
+
+        function render() {
+
+
+            const filtered =
+                getFilteredRows();
+
+
+            const total =
+                filtered.length;
+
+
+            const totalPages =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        total / pageSize
+                    )
+                );
+
+
+            currentPage =
+                Math.min(
+                    currentPage,
+                    totalPages
+                );
+
+
+            rows.forEach(row => {
+
+                row.hidden =
+                    true;
+
+            });
+
+
+            const start =
+                (currentPage - 1)
+                * pageSize;
+
+
+            const end =
+                Math.min(
+                    start + pageSize,
+                    total
+                );
+
+
+            filtered
+                .slice(
+                    start,
+                    end
+                )
+                .forEach(row => {
+
+                    row.hidden =
+                        false;
+
+                });
+
+
+            const hasResults =
+                total > 0;
+
+
+            table.hidden =
+                !hasResults;
+
+
+            emptyState.hidden =
+                hasResults;
+
+
+            resultsText.textContent =
+                hasResults
+                    ? `Showing ${start + 1}–${end} of ${total} cases`
+                    : "Showing 0 cases";
+
+
+            previousButton.disabled =
+                currentPage <= 1 ||
+                !hasResults;
+
+
+            nextButton.disabled =
+                currentPage >= totalPages ||
+                !hasResults;
+
+
+            renderPageNumbers(
+                hasResults
+                    ? totalPages
+                    : 0
+            );
+
+        }
+
+
+
+        function filtersChanged() {
+
+
+            currentPage = 1;
+
+
+            render();
+
+        }
+
+
+
+        search.addEventListener(
+            "input",
+            filtersChanged
+        );
+
+
+        status.addEventListener(
+            "change",
+            filtersChanged
+        );
+
+
+        priority.addEventListener(
+            "change",
+            filtersChanged
+        );
+
+
+
+        clear.addEventListener(
+            "click",
+            () => {
+
+
+                search.value = "";
+
+
+                status.value = "";
+
+
+                priority.value = "";
+
+
+                currentPage = 1;
+
+
+                render();
+
+            }
+        );
+
+
+
+        pageSizeSelect.addEventListener(
+            "change",
+            () => {
+
+
+                pageSize =
+                    Number(
+                        pageSizeSelect.value
+                    );
+
+
+                currentPage = 1;
+
+
+                render();
+
+            }
+        );
+
+
+
+        previousButton.addEventListener(
+            "click",
+            () => {
+
+
+                if (
+                    currentPage > 1
+                ) {
+
+
+                    currentPage--;
+
+
+                    render();
+
+                }
+
+            }
+        );
+
+
+
+        nextButton.addEventListener(
+            "click",
+            () => {
+
+
+                const totalPages =
+                    Math.max(
+                        1,
+                        Math.ceil(
+                            getFilteredRows().length
+                            / pageSize
+                        )
+                    );
+
+
+                if (
+                    currentPage < totalPages
+                ) {
+
+
+                    currentPage++;
+
+
+                    render();
+
+                }
+
+            }
+        );
+
+
+
+        render();
+
+
+    })();
+
+</script>

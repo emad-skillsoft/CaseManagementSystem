@@ -1,379 +1,2408 @@
 ﻿@using CaseManagementSystem.Constants
+@using System.Globalization
 @model CaseManagementSystem.ViewModels.DashboardViewModel
 
 @{
     ViewData["Title"] = "Home";
 
-    var isSupervisor = User.IsInRole(RoleNames.Supervisor);
-    var isExpert = User.IsInRole(RoleNames.Expert);
 
-    var attentionCases = Model.Cases
-        .Where(x =>
-            x.IsDelayed ||
-            x.CurrentStage == WorkflowStageNames.Challenge)
-        .Take(5)
-        .ToList();
+    var isSupervisor =
+        User.IsInRole(RoleNames.Supervisor);
 
-    var recentCases = Model.Cases
-        .Take(5)
-        .ToList();
+
+    var isExpert =
+        User.IsInRole(RoleNames.Expert);
+
+
+    var displayName =
+        User.Identity?.Name
+        ?? (isSupervisor ? "supervisor" : "expert");
+
+
+    var needsReviewCount =
+        ViewBag.NeedsReviewCount is int reviewCount
+            ? reviewCount
+            : 0;
+
+
+    /*
+     * ---------------------------------------------------------
+     * WORKFLOW COUNTS
+     * ---------------------------------------------------------
+     */
+
+    var assignedCount =
+        Model.Cases.Count(
+            x =>
+                x.CurrentStage ==
+                WorkflowStageNames.Assigned
+        );
+
+
+    var completionPendingCount =
+        Model.Cases.Count(
+            x =>
+                x.CurrentStage ==
+                WorkflowStageNames.CompletionPending
+        );
+
+
+    var highPriorityCount =
+        Model.Cases.Count(
+            x =>
+                x.Priority == "P1" ||
+                x.Priority == "P2"
+        );
+
+
+    var activeCasesCount =
+        Model.Cases.Count(
+            x =>
+                x.CurrentStage !=
+                WorkflowStageNames.Completed
+        );
+
+
+    /*
+     * ---------------------------------------------------------
+     * ATTENTION COUNTS
+     * ---------------------------------------------------------
+     */
+
+    var supervisorCaseAttentionCount =
+        Model.Cases.Count(
+            x =>
+                x.IsDelayed ||
+                x.CurrentStage ==
+                    WorkflowStageNames.Challenge ||
+                x.CurrentStage ==
+                    WorkflowStageNames.CompletionPending
+        );
+
+
+    var supervisorAttentionCount =
+        supervisorCaseAttentionCount +
+        needsReviewCount;
+
+
+    var expertAttentionCount =
+        Model.Cases.Count(
+            x =>
+                x.IsDelayed ||
+                x.CurrentStage ==
+                    WorkflowStageNames.Assigned ||
+                x.CurrentStage ==
+                    WorkflowStageNames.Challenge
+        );
+
+
+    /*
+     * ---------------------------------------------------------
+     * RECENT CASES
+     * ---------------------------------------------------------
+     */
+
+    var recentCases =
+        Model.Cases
+            .Take(5)
+            .ToList();
+
+
+    /*
+     * ---------------------------------------------------------
+     * DATE FORMAT
+     * ---------------------------------------------------------
+     */
+
+    string FormatDate(DateTime? date)
+    {
+        if (!date.HasValue)
+        {
+            return "—";
+        }
+
+        return date.Value.ToString(
+            "dd MMM yyyy",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+
+    string FormatTime(DateTime? date)
+    {
+        if (!date.HasValue)
+        {
+            return "—";
+        }
+
+        return date.Value.ToString(
+            "hh:mm tt",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * PRIORITY HELPERS
+     * ---------------------------------------------------------
+     */
+
+    string PriorityLabel(string priority)
+    {
+        return priority switch
+        {
+            "P1" => "Critical",
+            "P2" => "High",
+            "P3" => "Medium",
+            "P4" => "Low",
+            _ => priority
+        };
+    }
+
+
+    string PriorityClass(string priority)
+    {
+        return priority switch
+        {
+            "P1" => "home-priority-p1",
+            "P2" => "home-priority-p2",
+            "P3" => "home-priority-p3",
+            "P4" => "home-priority-p4",
+            _ => "home-priority-default"
+        };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * STAGE HELPERS
+     * ---------------------------------------------------------
+     */
+
+    string StageLabel(string stage)
+    {
+        return stage switch
+        {
+            WorkflowStageNames.Assigned =>
+                "Assigned",
+
+            WorkflowStageNames.InProgress =>
+                "In Progress",
+
+            WorkflowStageNames.Challenge =>
+                "Challenge",
+
+            WorkflowStageNames.CompletionPending =>
+                "Completion Pending",
+
+            WorkflowStageNames.Completed =>
+                "Completed",
+
+            _ =>
+                stage
+        };
+    }
+
+
+    string StageClass(string stage)
+    {
+        return stage switch
+        {
+            WorkflowStageNames.Assigned =>
+                "home-stage-assigned",
+
+            WorkflowStageNames.InProgress =>
+                "home-stage-progress",
+
+            WorkflowStageNames.Challenge =>
+                "home-stage-challenge",
+
+            WorkflowStageNames.CompletionPending =>
+                "home-stage-pending",
+
+            WorkflowStageNames.Completed =>
+                "home-stage-completed",
+
+            _ =>
+                "home-stage-default"
+        };
+    }
 }
 
-<div class="mb-4">
-    <h2 class="fw-bold mb-1">
-        @if (isSupervisor)
-        {
-            <text>Case Management Overview</text>
-        }
-        else
-        {
-            <text>My Work Overview</text>
-        }
-    </h2>
 
-    <p class="text-muted mb-0">
-        Welcome, @User.Identity?.Name
-    </p>
-</div>
+<div class="home-workspace">
 
-<!-- KPI Cards -->
-<div class="row g-3 mb-4">
 
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">
-                    @(isSupervisor ? "Total Cases" : "My Cases")
-                </div>
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
 
-                <div class="fs-2 fw-bold">
-                    @Model.TotalCases
-                </div>
-            </div>
+    <div class="home-page-header">
+
+
+        <div class="home-heading">
+
+
+            @if (isSupervisor)
+            {
+                <h1>
+                    Case Management Overview
+                </h1>
+
+                <p>
+                    Welcome, @displayName
+                </p>
+            }
+            else
+            {
+                <h1>
+                    My Work Overview
+                </h1>
+
+                <p>
+                    Welcome, @displayName
+                </p>
+            }
+
+
         </div>
-    </div>
 
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">
-                    In Progress
-                </div>
 
-                <div class="fs-2 fw-bold">
-                    @Model.InProgressCount
-                </div>
-            </div>
+        <div class="home-date-card">
+
+
+            <svg viewBox="0 0 24 24"
+                 aria-hidden="true">
+
+                <rect x="3"
+                      y="5"
+                      width="18"
+                      height="16"
+                      rx="2">
+                </rect>
+
+                <path d="M8 3v4">
+                </path>
+
+                <path d="M16 3v4">
+                </path>
+
+                <path d="M3 10h18">
+                </path>
+
+            </svg>
+
+
+            <span>
+                @DateTime.Now.ToString(
+                    "dd MMM yyyy",
+                    CultureInfo.InvariantCulture
+                )
+            </span>
+
+
         </div>
+
+
     </div>
 
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">
-                    Challenge
+
+
+    @if (isSupervisor)
+    {
+
+        <!-- =================================================
+             SUPERVISOR KPI CARDS
+             ================================================= -->
+
+        <section class="home-kpi-grid">
+
+
+            <!-- TOTAL -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-blue">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M4 5h16v15H4z">
+                        </path>
+
+                        <path d="M8 3v4">
+                        </path>
+
+                        <path d="M16 3v4">
+                        </path>
+
+                        <path d="M4 10h16">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Total Cases
+                    </span>
+
+
+                    <strong>
+                        @Model.TotalCases
+                    </strong>
+
+
+                    <small>
+                        All cases
+                    </small>
+
+
                 </div>
 
-                <div class="fs-2 fw-bold">
-                    @Model.ChallengeCount
+
+            </article>
+
+
+
+            <!-- IN PROGRESS -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-orange">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M12 7v5l3 2">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        In Progress
+                    </span>
+
+
+                    <strong>
+                        @Model.InProgressCount
+                    </strong>
+
+
+                    <small>
+                        Active cases
+                    </small>
+
+
                 </div>
+
+
+            </article>
+
+
+
+            <!-- CHALLENGE -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-purple">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M5 21V4">
+                        </path>
+
+                        <path d="M5 5h12l-2 4 2 4H5">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Challenge
+                    </span>
+
+
+                    <strong>
+                        @Model.ChallengeCount
+                    </strong>
+
+
+                    <small>
+                        Need review
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- DELAYED -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-red">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M12 7v6">
+                        </path>
+
+                        <path d="M12 17h.01">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Delayed
+                    </span>
+
+
+                    <strong>
+                        @Model.DelayedCount
+                    </strong>
+
+
+                    <small>
+                        SLA breached
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- COMPLETED -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-green">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M8 12l3 3 5-6">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Completed
+                    </span>
+
+
+                    <strong>
+                        @Model.CompletedCount
+                    </strong>
+
+
+                    <small>
+                        Completed cases
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+        </section>
+
+
+
+        <!-- =================================================
+             SUPERVISOR OPERATIONS
+             ================================================= -->
+
+        <section class="home-main-grid">
+
+
+            <!-- =============================================
+                 CASES REQUIRING ATTENTION
+                 ============================================= -->
+
+            <article class="home-panel">
+
+
+                <header class="home-panel-header">
+
+
+                    <div>
+
+
+                        <h2>
+                            Cases Requiring Attention
+                        </h2>
+
+
+                        <span class="home-panel-count home-count-danger">
+
+                            @supervisorAttentionCount
+
+                        </span>
+
+
+                    </div>
+
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-panel-link">
+
+                        View All
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14">
+                            </path>
+
+                            <path d="M13 6l6 6-6 6">
+                            </path>
+
+                        </svg>
+
+                    </a>
+
+
+                </header>
+
+
+
+                <div class="home-operation-list">
+
+
+                    <!-- CHALLENGE -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-red">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M5 21V4">
+                                </path>
+
+                                <path d="M5 5h12l-2 4 2 4H5">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Challenge
+                            </strong>
+
+
+                            <small>
+                                Cases with challenges that need your review
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-red">
+
+                            @Model.ChallengeCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- COMPLETION -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-orange">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5">
+                                </path>
+
+                                <path d="M12 16h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Completion Pending
+                            </strong>
+
+
+                            <small>
+                                Cases submitted for completion review
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-orange">
+
+                            @completionPendingCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- DELAYED -->
+
+                    <a asp-controller="Dashboard"
+                       asp-action="Index"
+                       asp-route-filter="Delayed"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-red">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5">
+                                </path>
+
+                                <path d="M12 16h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Delayed Cases
+                            </strong>
+
+
+                            <small>
+                                Cases that have exceeded their SLA
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-red">
+
+                            @Model.DelayedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- NEEDS REVIEW -->
+
+                    <a asp-controller="Import"
+                       asp-action="Review"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-blue">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 4h16v16H4z">
+                                </path>
+
+                                <path d="M8 9h8">
+                                </path>
+
+                                <path d="M8 13h5">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Import Needs Review
+                            </strong>
+
+
+                            <small>
+                                Imported cases require expert correction
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-blue">
+
+                            @needsReviewCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- =============================================
+                 OPERATIONAL OVERVIEW
+                 ============================================= -->
+
+            <article class="home-panel">
+
+
+                <header class="home-panel-header">
+
+
+                    <div>
+
+                        <h2>
+                            Operational Overview
+                        </h2>
+
+                    </div>
+
+
+                </header>
+
+
+
+                <div class="home-operation-list">
+
+
+                    <!-- ASSIGNED -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-blue">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 7h6l2 2h8v10H4z">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Assigned
+                            </strong>
+
+
+                            <small>
+                                Cases assigned and ready for work
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-blue">
+
+                            @assignedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- IN PROGRESS -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-cyan">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5l3 2">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                In Progress
+                            </strong>
+
+
+                            <small>
+                                Cases currently being processed
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-cyan">
+
+                            @Model.InProgressCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- COMPLETION PENDING -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-orange">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5">
+                                </path>
+
+                                <path d="M12 16h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Completion Pending
+                            </strong>
+
+
+                            <small>
+                                Waiting for supervisor decision
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-orange">
+
+                            @completionPendingCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- NEEDS REVIEW -->
+
+                    <a asp-controller="Import"
+                       asp-action="Review"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-blue">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 4h16v16H4z">
+                                </path>
+
+                                <path d="M8 9h8">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Import Needs Review
+                            </strong>
+
+
+                            <small>
+                                Import exceptions waiting for resolution
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-blue">
+
+                            @needsReviewCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- COMPLETED -->
+
+                    <a asp-controller="Cases"
+                       asp-action="Index"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-green">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M8 12l3 3 5-6">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Completed
+                            </strong>
+
+
+                            <small>
+                                Cases completed successfully
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-green">
+
+                            @Model.CompletedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+                </div>
+
+
+            </article>
+
+
+        </section>
+
+    }
+    else
+    {
+
+        <!-- =================================================
+             EXPERT KPI CARDS
+             ================================================= -->
+
+        <section class="home-kpi-grid">
+
+
+            <!-- MY CASES -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-blue">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M4 7h6l2 2h8v10H4z">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        My Cases
+                    </span>
+
+
+                    <strong>
+                        @Model.TotalCases
+                    </strong>
+
+
+                    <small>
+                        Assigned to you
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- ASSIGNED -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-slate">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M5 12h14">
+                        </path>
+
+                        <path d="M13 6l6 6-6 6">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Assigned
+                    </span>
+
+
+                    <strong>
+                        @assignedCount
+                    </strong>
+
+
+                    <small>
+                        Ready to start
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- IN PROGRESS -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-orange">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M12 7v5l3 2">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        In Progress
+                    </span>
+
+
+                    <strong>
+                        @Model.InProgressCount
+                    </strong>
+
+
+                    <small>
+                        Active work
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- CHALLENGE -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-purple">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M5 21V4">
+                        </path>
+
+                        <path d="M5 5h12l-2 4 2 4H5">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Challenge
+                    </span>
+
+
+                    <strong>
+                        @Model.ChallengeCount
+                    </strong>
+
+
+                    <small>
+                        Blocked cases
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- COMPLETION PENDING -->
+
+            <article class="home-kpi-card">
+
+
+                <span class="home-kpi-icon home-icon-green">
+
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9">
+                        </circle>
+
+                        <path d="M8 12l3 3 5-6">
+                        </path>
+
+                    </svg>
+
+
+                </span>
+
+
+                <div>
+
+
+                    <span>
+                        Completion Pending
+                    </span>
+
+
+                    <strong>
+                        @completionPendingCount
+                    </strong>
+
+
+                    <small>
+                        Awaiting review
+                    </small>
+
+
+                </div>
+
+
+            </article>
+
+
+        </section>
+
+
+
+        <!-- =================================================
+             EXPERT OPERATIONS
+             ================================================= -->
+
+        <section class="home-main-grid">
+
+
+            <!-- =============================================
+                 MY ATTENTION
+                 ============================================= -->
+
+            <article class="home-panel">
+
+
+                <header class="home-panel-header">
+
+
+                    <div>
+
+
+                        <h2>
+                            Cases Requiring My Attention
+                        </h2>
+
+
+                        <span class="home-panel-count home-count-danger">
+
+                            @expertAttentionCount
+
+                        </span>
+
+
+                    </div>
+
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-panel-link">
+
+                        View My Cases
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14">
+                            </path>
+
+                            <path d="M13 6l6 6-6 6">
+                            </path>
+
+                        </svg>
+
+                    </a>
+
+
+                </header>
+
+
+
+                <div class="home-operation-list">
+
+
+                    <!-- ASSIGNED -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-blue">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 7h6l2 2h8v10H4z">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Assigned
+                            </strong>
+
+
+                            <small>
+                                New cases ready for you to start
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-blue">
+
+                            @assignedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- IN PROGRESS -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-cyan">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5l3 2">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                In Progress
+                            </strong>
+
+
+                            <small>
+                                Cases currently being worked on
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-cyan">
+
+                            @Model.InProgressCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- CHALLENGE -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-orange">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M5 21V4">
+                                </path>
+
+                                <path d="M5 5h12l-2 4 2 4H5">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Challenge
+                            </strong>
+
+
+                            <small>
+                                Cases currently blocked by a challenge
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-orange">
+
+                            @Model.ChallengeCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- DELAYED -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-red">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5">
+                                </path>
+
+                                <path d="M12 16h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Delayed
+                            </strong>
+
+
+                            <small>
+                                Your cases that have exceeded their SLA
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-red">
+
+                            @Model.DelayedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+                </div>
+
+
+            </article>
+
+
+
+            <!-- =============================================
+                 MY WORK SUMMARY
+                 ============================================= -->
+
+            <article class="home-panel">
+
+
+                <header class="home-panel-header">
+
+
+                    <div>
+
+                        <h2>
+                            My Work Summary
+                        </h2>
+
+                    </div>
+
+
+                </header>
+
+
+
+                <div class="home-operation-list">
+
+
+                    <!-- ACTIVE -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-cyan">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M4 7h6l2 2h8v10H4z">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Active Cases
+                            </strong>
+
+
+                            <small>
+                                Cases that are not yet completed
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-cyan">
+
+                            @activeCasesCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- HIGH PRIORITY -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-red">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <path d="M12 3l9 18H3z">
+                                </path>
+
+                                <path d="M12 9v5">
+                                </path>
+
+                                <path d="M12 17h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                High Priority
+                            </strong>
+
+
+                            <small>
+                                P1 and P2 cases assigned to you
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-red">
+
+                            @highPriorityCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- COMPLETION PENDING -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-orange">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M12 7v5">
+                                </path>
+
+                                <path d="M12 16h.01">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Completion Pending
+                            </strong>
+
+
+                            <small>
+                                Submitted and waiting for supervisor review
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-orange">
+
+                            @completionPendingCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+
+                    <!-- COMPLETED -->
+
+                    <a asp-controller="Cases"
+                       asp-action="MyCases"
+                       class="home-operation-item">
+
+
+                        <span class="home-operation-icon home-operation-green">
+
+
+                            <svg viewBox="0 0 24 24">
+
+                                <circle cx="12"
+                                        cy="12"
+                                        r="9">
+                                </circle>
+
+                                <path d="M8 12l3 3 5-6">
+                                </path>
+
+                            </svg>
+
+
+                        </span>
+
+
+                        <span class="home-operation-copy">
+
+
+                            <strong>
+                                Completed
+                            </strong>
+
+
+                            <small>
+                                Your completed cases
+                            </small>
+
+
+                        </span>
+
+
+                        <strong class="home-operation-number home-number-green">
+
+                            @Model.CompletedCount
+
+                        </strong>
+
+
+                        <svg class="home-operation-arrow"
+                             viewBox="0 0 24 24">
+
+                            <path d="M9 5l7 7-7 7">
+                            </path>
+
+                        </svg>
+
+
+                    </a>
+
+
+                </div>
+
+
+            </article>
+
+
+        </section>
+
+    }
+
+
+
+    <!-- =====================================================
+         RECENT CASES
+         ===================================================== -->
+
+    <section class="home-recent-panel">
+
+
+        <header class="home-panel-header">
+
+
+            <div>
+
+                <h2>
+                    @(isSupervisor
+                        ? "Recent Cases"
+                        : "Recent My Cases")
+                </h2>
+
             </div>
-        </div>
-    </div>
 
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">
-                    Delayed
-                </div>
 
-                <div class="fs-2 fw-bold">
-                    @Model.DelayedCount
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">
-                    Completed
-                </div>
-
-                <div class="fs-2 fw-bold">
-                    @Model.CompletedCount
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<!-- Quick Actions -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white fw-semibold">
-        Quick Actions
-    </div>
-
-    <div class="card-body d-flex gap-2 flex-wrap">
-
-        <a asp-controller="Dashboard"
-           asp-action="Index"
-           class="btn btn-primary">
-            Open Dashboard
-        </a>
-
-        @if (isSupervisor)
-        {
             <a asp-controller="Cases"
-               asp-action="Index"
-               class="btn btn-outline-primary">
-                All Cases
-            </a>
+               asp-action="@(isSupervisor ? "Index" : "MyCases")"
+               class="home-panel-link">
 
-            <a asp-controller="Import"
-               asp-action="Index"
-               class="btn btn-outline-primary">
-                Import Cases
-            </a>
 
-            <a asp-controller="Import"
-               asp-action="Review"
-               class="btn btn-outline-warning">
-                Needs Review
-            </a>
-
-            <a asp-controller="Users"
-               asp-action="Index"
-               class="btn btn-outline-secondary">
-                Users
-            </a>
-        }
-
-        @if (isExpert)
-        {
-            <a asp-controller="Cases"
-               asp-action="MyCases"
-               class="btn btn-outline-primary">
-                My Cases
-            </a>
-        }
-
-    </div>
-</div>
-
-<!-- Cases Requiring Attention -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">
-            Cases Requiring Attention
-        </span>
-
-        <span class="badge bg-danger">
-            @attentionCases.Count
-        </span>
-    </div>
-
-    <div class="card-body p-0">
-
-        @if (attentionCases.Any())
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-                        <tr>
-                            <th>Case</th>
-                            <th>Title</th>
-                            <th>Priority</th>
-                            <th>Status</th>
-
-                            @if (isSupervisor)
-                            {
-                                <th>Expert</th>
-                            }
-
-                            <th>SLA</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        @foreach (var item in attentionCases)
-                        {
-                            <tr>
-                                <td class="fw-semibold">
-                                    @item.ExternalCaseId
-                                </td>
-
-                                <td>
-                                    @item.Title
-                                </td>
-
-                                <td>
-                                    @item.Priority
-                                </td>
-
-                                <td>
-                                    @item.CurrentStage
-                                </td>
-
-                                @if (isSupervisor)
-                                {
-                                    <td>
-                                        @item.AssignedExpert
-                                    </td>
-                                }
-
-                                <td>
-                                    @if (item.IsDelayed)
-                                    {
-                                        <span class="badge bg-danger">
-                                            Delayed
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning text-dark">
-                                            Attention
-                                        </span>
-                                    }
-                                </td>
-
-                                <td class="text-end">
-                                    <a asp-controller="Cases"
-                                       asp-action="Details"
-                                       asp-route-id="@item.Id"
-                                       class="btn btn-sm btn-outline-primary">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-
-                    </tbody>
-
-                </table>
-            </div>
-        }
-        else
-        {
-            <div class="p-4 text-center text-muted">
-                No cases currently require attention.
-            </div>
-        }
-
-    </div>
-</div>
-
-<!-- Recent Cases -->
-<div class="card shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-
-        <span class="fw-semibold">
-            @(isSupervisor ? "Recent Cases" : "My Recent Cases")
-        </span>
-
-        @if (isSupervisor)
-        {
-            <a asp-controller="Cases"
-               asp-action="Index"
-               class="btn btn-sm btn-outline-secondary">
                 View All
-            </a>
-        }
-        else
-        {
-            <a asp-controller="Cases"
-               asp-action="MyCases"
-               class="btn btn-sm btn-outline-secondary">
-                View All
-            </a>
-        }
 
-    </div>
 
-    <div class="card-body p-0">
+                <svg viewBox="0 0 24 24">
+
+                    <path d="M5 12h14">
+                    </path>
+
+                    <path d="M13 6l6 6-6 6">
+                    </path>
+
+                </svg>
+
+
+            </a>
+
+
+        </header>
+
+
 
         @if (recentCases.Any())
         {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
 
-                    <thead class="table-light">
+            <div class="table-responsive">
+
+
+                <table class="home-recent-table">
+
+
+                    <thead>
+
+
                         <tr>
-                            <th>Case</th>
-                            <th>Title</th>
-                            <th>Priority</th>
-                            <th>Status</th>
+
+
+                            <th>
+                                Case
+                            </th>
+
+
+                            <th>
+                                Title
+                            </th>
+
+
+                            <th>
+                                Priority
+                            </th>
+
+
+                            <th>
+                                Status
+                            </th>
+
 
                             @if (isSupervisor)
                             {
-                                <th>Expert</th>
+                                <th>
+                                    Expert
+                                </th>
                             }
 
-                            <th>Due Date</th>
-                            <th></th>
+
+                            <th>
+                                SLA Due
+                            </th>
+
+
+                            <th>
+                                Action
+                            </th>
+
+
                         </tr>
+
+
                     </thead>
+
+
 
                     <tbody>
 
+
                         @foreach (var item in recentCases)
                         {
+
                             <tr>
-                                <td class="fw-semibold">
-                                    @item.ExternalCaseId
-                                </td>
+
+
+                                <!-- CASE -->
 
                                 <td>
-                                    @item.Title
+
+
+                                    <strong class="home-case-id">
+
+                                        @item.ExternalCaseId
+
+                                    </strong>
+
+
                                 </td>
+
+
+
+                                <!-- TITLE -->
 
                                 <td>
-                                    @item.Priority
+
+
+                                    <span class="home-case-title">
+
+                                        @item.Title
+
+                                    </span>
+
+
                                 </td>
+
+
+
+                                <!-- PRIORITY -->
 
                                 <td>
-                                    @item.CurrentStage
+
+
+                                    <span class="home-status-badge @PriorityClass(item.Priority)">
+
+
+                                        <span class="home-badge-dot">
+                                        </span>
+
+
+                                        @item.Priority
+                                        @PriorityLabel(item.Priority)
+
+
+                                    </span>
+
+
                                 </td>
 
+
+
+                                <!-- STATUS -->
+
+                                <td>
+
+
+                                    <span class="home-status-badge @StageClass(item.CurrentStage)">
+
+
+                                        <span class="home-badge-dot">
+                                        </span>
+
+
+                                        @StageLabel(item.CurrentStage)
+
+
+                                    </span>
+
+
+                                </td>
+
+
+
+                                <!-- EXPERT -->
                                 @if (isSupervisor)
                                 {
+
                                     <td>
-                                        @item.AssignedExpert
+
+
+                                        <span class="home-expert-name">
+
+                                            @(string.IsNullOrWhiteSpace(
+                                                item.AssignedExpert
+                                            )
+                                                ? "—"
+                                                : item.AssignedExpert)
+
+                                        </span>
+
+
                                     </td>
+
                                 }
 
+
+
+                                <!-- SLA -->
+
                                 <td>
-                                    @(item.DueDate?.ToString("yyyy-MM-dd HH:mm") ?? "-")
+
+
+                                    <div class="home-due-date @(item.IsDelayed ? "home-due-delayed" : "")">
+
+
+                                        <strong>
+                                            @FormatDate(item.DueDate)
+                                        </strong>
+
+
+                                        <span>
+                                            @FormatTime(item.DueDate)
+                                        </span>
+
+
+                                        @if (item.IsDelayed)
+                                        {
+                                            <small>
+                                                Delayed
+                                            </small>
+                                        }
+
+
+                                    </div>
+
+
                                 </td>
 
-                                <td class="text-end">
+
+
+                                <!-- ACTION -->
+
+                                <td>
+
+
                                     <a asp-controller="Cases"
                                        asp-action="Details"
                                        asp-route-id="@item.Id"
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="home-view-case">
+
+
                                         View
+
+
+                                        <svg viewBox="0 0 24 24">
+
+                                            <path d="M5 12h14">
+                                            </path>
+
+                                            <path d="M13 6l6 6-6 6">
+                                            </path>
+
+                                        </svg>
+
+
                                     </a>
+
+
                                 </td>
+
+
                             </tr>
+
                         }
+
 
                     </tbody>
 
+
                 </table>
+
+
             </div>
+
         }
         else
         {
-            <div class="p-4 text-center text-muted">
-                No cases available.
+
+            <div class="home-empty-state">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <path d="M4 7h6l2 2h8v10H4z">
+                    </path>
+
+                </svg>
+
+
+                <strong>
+                    No cases available
+                </strong>
+
+
+                <span>
+                    There are no cases to display right now.
+                </span>
+
+
             </div>
+
         }
 
-    </div>
+
+    </section>
+
+
 </div>

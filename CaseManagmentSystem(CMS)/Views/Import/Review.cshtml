@@ -1,70 +1,1594 @@
-﻿@model IEnumerable<CaseManagementSystem.Models.ImportReviewItem>
+﻿@using System.Globalization
+@model IEnumerable<CaseManagementSystem.Models.ImportReviewItem>
 
-<h2>Import Needs Review</h2>
-@if (TempData["ReviewSuccess"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["ReviewSuccess"]
-    </div>
+@{
+    ViewData["Title"] = "Import Needs Review";
+
+    var reviewItems = Model
+        .OrderByDescending(x => x.CreatedAt)
+        .ToList();
+
+    var totalCount = reviewItems.Count;
+
+    var pendingCount = reviewItems.Count(x => !x.IsResolved);
+
+    var resolvedCount = reviewItems.Count(x => x.IsResolved);
+
+
+    string FormatDate(DateTime date)
+    {
+        return date.ToString(
+            "dd MMM yyyy",
+            CultureInfo.InvariantCulture
+        );
+    }
+
+
+    string FormatTime(DateTime date)
+    {
+        return date.ToString(
+            "hh:mm tt",
+            CultureInfo.InvariantCulture
+        );
+    }
 }
 
-@if (TempData["ReviewError"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["ReviewError"]
+
+<div class="review-page">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="review-page-header">
+
+
+        <div class="review-page-heading">
+
+
+            <div class="review-page-title-row">
+
+
+                <h1>
+                    Import Needs Review
+                </h1>
+
+
+                @if (pendingCount > 0)
+                {
+                    <span class="review-pending-header-badge">
+
+                        @pendingCount Pending
+
+                    </span>
+                }
+
+
+            </div>
+
+
+            <p>
+                Resolve imported cases that could not be assigned to an Expert.
+                Enter the correct employee number and resolve.
+            </p>
+
+
+        </div>
+
+
+
+        <a asp-controller="Import"
+           asp-action="Index"
+           class="review-import-button">
+
+
+            <svg viewBox="0 0 24 24"
+                 aria-hidden="true">
+
+                <path d="M4 4h10l5 5v11H4z">
+                </path>
+
+                <path d="M14 4v5h5">
+                </path>
+
+                <path d="M12 12v5">
+                </path>
+
+                <path d="M9.5 14.5L12 12l2.5 2.5">
+                </path>
+
+            </svg>
+
+
+            Import Cases
+
+
+        </a>
+
+
     </div>
+
+
+
+    <!-- =====================================================
+         SUCCESS / ERROR MESSAGES
+         ===================================================== -->
+    @if (TempData["ReviewSuccess"] != null)
+    {
+
+        <div class="review-alert review-alert-success">
+
+
+            <span class="review-alert-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="12"
+                            cy="12"
+                            r="9">
+                    </circle>
+
+                    <path d="M8 12l3 3 5-6">
+                    </path>
+
+                </svg>
+
+
+            </span>
+
+
+            <div>
+
+                <strong>
+                    Review completed
+                </strong>
+
+                <span>
+                    @TempData["ReviewSuccess"]
+                </span>
+
+            </div>
+
+
+        </div>
+
+    }
+
+
+    @if (TempData["ReviewError"] != null)
+    {
+
+        <div class="review-alert review-alert-error">
+
+
+            <span class="review-alert-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="12"
+                            cy="12"
+                            r="9">
+                    </circle>
+
+                    <path d="M12 7v6">
+                    </path>
+
+                    <path d="M12 17h.01">
+                    </path>
+
+                </svg>
+
+
+            </span>
+
+
+            <div>
+
+                <strong>
+                    Unable to resolve item
+                </strong>
+
+                <span>
+                    @TempData["ReviewError"]
+                </span>
+
+            </div>
+
+
+        </div>
+
+    }
+
+
+
+    <!-- =====================================================
+         SUMMARY
+         ===================================================== -->
+
+    <section class="review-summary-grid">
+
+
+        <!-- PENDING -->
+
+        <article class="review-summary-card review-summary-pending">
+
+
+            <div class="review-summary-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <path d="M7 3h10">
+                    </path>
+
+                    <path d="M7 21h10">
+                    </path>
+
+                    <path d="M8 3c0 4 1 5 4 7 3-2 4-3 4-7">
+                    </path>
+
+                    <path d="M8 21c0-4 1-5 4-7 3 2 4 3 4 7">
+                    </path>
+
+                </svg>
+
+
+            </div>
+
+
+            <div class="review-summary-copy">
+
+
+                <span>
+                    Pending
+                </span>
+
+
+                <strong>
+                    @pendingCount
+                </strong>
+
+
+                <small>
+                    Awaiting resolution
+                </small>
+
+
+            </div>
+
+
+        </article>
+
+
+
+        <!-- RESOLVED -->
+
+        <article class="review-summary-card review-summary-resolved">
+
+
+            <div class="review-summary-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="12"
+                            cy="12"
+                            r="9">
+                    </circle>
+
+                    <path d="M8 12l3 3 5-6">
+                    </path>
+
+                </svg>
+
+
+            </div>
+
+
+            <div class="review-summary-copy">
+
+
+                <span>
+                    Resolved
+                </span>
+
+
+                <strong>
+                    @resolvedCount
+                </strong>
+
+
+                <small>
+                    Already resolved
+                </small>
+
+
+            </div>
+
+
+        </article>
+
+
+
+        <!-- TOTAL -->
+
+        <article class="review-summary-card review-summary-total">
+
+
+            <div class="review-summary-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="12"
+                            cy="12"
+                            r="9">
+                    </circle>
+
+                    <path d="M12 3v9h9">
+                    </path>
+
+                </svg>
+
+
+            </div>
+
+
+            <div class="review-summary-copy">
+
+
+                <span>
+                    Total
+                </span>
+
+
+                <strong>
+                    @totalCount
+                </strong>
+
+
+                <small>
+                    All review items
+                </small>
+
+
+            </div>
+
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         FILTERS
+         ===================================================== -->
+
+    <section class="review-filter-card">
+
+
+        <div class="review-search-box">
+
+
+            <svg viewBox="0 0 24 24"
+                 aria-hidden="true">
+
+                <circle cx="11"
+                        cy="11"
+                        r="7">
+                </circle>
+
+                <path d="M20 20l-4-4">
+                </path>
+
+            </svg>
+
+
+            <input id="reviewSearch"
+                   type="search"
+                   placeholder="Search Case ID, title or Employee #..."
+                   autocomplete="off" />
+
+
+        </div>
+
+
+
+        <label class="review-status-filter">
+
+
+            <span>
+                Status
+            </span>
+
+
+            <select id="reviewStatusFilter">
+
+                <option value="">
+                    All
+                </option>
+
+                <option value="pending">
+                    Pending
+                </option>
+
+                <option value="resolved">
+                    Resolved
+                </option>
+
+            </select>
+
+
+        </label>
+
+
+
+        <button type="button"
+                id="reviewClearFilters"
+                class="review-clear-button">
+
+
+            <svg viewBox="0 0 24 24">
+
+                <path d="M4 5h16">
+                </path>
+
+                <path d="M7 10h10">
+                </path>
+
+                <path d="M10 15h4">
+                </path>
+
+                <path d="M18 18l3 3">
+                </path>
+
+                <path d="M21 18l-3 3">
+                </path>
+
+            </svg>
+
+
+            Clear Filters
+
+
+        </button>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REVIEW TABLE CARD
+         ===================================================== -->
+
+    <section class="review-table-card">
+
+
+        <!-- =================================================
+             TABS
+             ================================================= -->
+
+        <div class="review-tabs">
+
+
+            <button type="button"
+                    class="review-tab active"
+                    data-review-tab="pending">
+
+
+                Pending
+
+
+                <span>
+                    @pendingCount
+                </span>
+
+
+            </button>
+
+
+
+            <button type="button"
+                    class="review-tab"
+                    data-review-tab="resolved">
+
+
+                Resolved
+
+
+                <span>
+                    @resolvedCount
+                </span>
+
+
+            </button>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             TABLE
+             ================================================= -->
+
+        <div class="table-responsive">
+
+
+            <table class="review-table"
+                   id="reviewTable">
+
+
+                <thead>
+
+
+                    <tr>
+
+
+                        <th>
+                            Case ID
+                        </th>
+
+
+                        <th>
+                            Issue
+                        </th>
+
+
+                        <th>
+                            Employee #
+                        </th>
+
+
+                        <th>
+                            Row
+                        </th>
+
+
+                        <th>
+                            Created
+                        </th>
+
+
+                        <th>
+                            Action
+                        </th>
+
+
+                    </tr>
+
+
+                </thead>
+
+
+
+                <tbody id="reviewTableBody">
+
+
+                    @foreach (var item in reviewItems)
+                    {
+
+                        var status =
+                            item.IsResolved
+                                ? "resolved"
+                                : "pending";
+
+
+                        <tr class="review-row @(item.IsResolved ? "review-row-resolved" : "review-row-pending")"
+                            data-status="@status"
+                            data-case-id="@item.ExternalCaseId.ToLowerInvariant()"
+                            data-title="@item.Title.ToLowerInvariant()"
+                            data-employee="@item.EmployeeNumber.ToLowerInvariant()">
+
+
+                            <!-- =========================================
+                                 CASE
+                                 ========================================= -->
+
+                            <td class="review-case-cell">
+
+
+                                <div>
+
+
+                                    <strong>
+                                        @item.ExternalCaseId
+                                    </strong>
+
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Title))
+                                    {
+                                        <span>
+                                            @item.Title
+                                        </span>
+                                    }
+
+
+                                </div>
+
+
+                            </td>
+
+
+
+                            <!-- =========================================
+                                 ISSUE
+                                 ========================================= -->
+
+                            <td class="review-issue-cell">
+
+
+                                @if (!item.IsResolved)
+                                {
+
+                                    <div class="review-issue-main">
+
+
+                                        <span class="review-warning-icon">
+
+
+                                            <svg viewBox="0 0 24 24">
+
+                                                <circle cx="12"
+                                                        cy="12"
+                                                        r="9">
+                                                </circle>
+
+                                                <path d="M12 7v6">
+                                                </path>
+
+                                                <path d="M12 17h.01">
+                                                </path>
+
+                                            </svg>
+
+
+                                        </span>
+
+
+
+                                        <div>
+
+
+                                            <strong>
+                                                @item.Issue
+                                            </strong>
+
+
+                                            <span class="review-needs-badge">
+                                                Needs Review
+                                            </span>
+
+
+                                        </div>
+
+
+                                    </div>
+
+                                }
+                                else
+                                {
+
+                                    <div class="review-issue-main">
+
+
+                                        <span class="review-resolved-icon">
+
+
+                                            <svg viewBox="0 0 24 24">
+
+                                                <circle cx="12"
+                                                        cy="12"
+                                                        r="9">
+                                                </circle>
+
+                                                <path d="M8 12l3 3 5-6">
+                                                </path>
+
+                                            </svg>
+
+
+                                        </span>
+
+
+
+                                        <div>
+
+
+                                            <strong>
+                                                Resolved
+                                            </strong>
+
+
+                                            <span class="review-resolved-badge">
+                                                Resolved
+                                            </span>
+
+
+                                        </div>
+
+
+                                    </div>
+
+                                }
+
+
+                            </td>
+
+
+
+                            <!-- =========================================
+                                 EMPLOYEE NUMBER
+                                 ========================================= -->
+
+                            <td class="review-employee-cell">
+
+
+                                @if (string.IsNullOrWhiteSpace(item.EmployeeNumber))
+                                {
+                                    <span class="review-empty-value">
+                                        —
+                                    </span>
+                                }
+                                else
+                                {
+                                    @item.EmployeeNumber
+                                }
+
+
+                            </td>
+
+
+
+                            <!-- =========================================
+                                 ROW NUMBER
+                                 ========================================= -->
+
+                            <td class="review-row-number">
+
+                                @item.RowNumber
+
+                            </td>
+
+
+
+                            <!-- =========================================
+                                 CREATED
+                                 ========================================= -->
+
+                            <td>
+
+
+                                <div class="review-created-date">
+
+
+                                    <strong>
+                                        @FormatDate(item.CreatedAt)
+                                    </strong>
+
+
+                                    <span>
+                                        @FormatTime(item.CreatedAt)
+                                    </span>
+
+
+                                </div>
+
+
+                            </td>
+
+
+
+                            <!-- =========================================
+                                 ACTION
+                                 ========================================= -->
+
+                            <td class="review-action-cell">
+
+
+                                @if (!item.IsResolved)
+                                {
+
+                                    <form asp-controller="Import"
+                                          asp-action="ResolveReview"
+                                          method="post"
+                                          class="review-resolve-form">
+
+
+                                        @Html.AntiForgeryToken()
+
+
+                                        <input type="hidden"
+                                               name="ReviewItemId"
+                                               value="@item.Id" />
+
+
+
+                                        <label>
+
+
+                                            <span>
+                                                Correct Employee #
+                                            </span>
+
+
+                                            <input type="text"
+                                                   name="EmployeeNumber"
+                                                   value="@item.EmployeeNumber"
+                                                   placeholder="Enter employee number"
+                                                   autocomplete="off"
+                                                   required />
+
+
+                                        </label>
+
+
+
+                                        <button type="submit"
+                                                class="review-resolve-button">
+
+
+                                            <svg viewBox="0 0 24 24">
+
+                                                <circle cx="12"
+                                                        cy="12"
+                                                        r="9">
+                                                </circle>
+
+                                                <path d="M8 12l3 3 5-6">
+                                                </path>
+
+                                            </svg>
+
+
+                                            Resolve
+
+
+                                        </button>
+
+
+                                    </form>
+
+                                }
+                                else
+                                {
+
+                                    <div class="review-resolved-action">
+
+
+                                        <svg viewBox="0 0 24 24">
+
+                                            <circle cx="12"
+                                                    cy="12"
+                                                    r="9">
+                                            </circle>
+
+                                            <path d="M8 12l3 3 5-6">
+                                            </path>
+
+                                        </svg>
+
+
+                                        Resolved
+
+
+                                    </div>
+
+                                }
+
+
+                            </td>
+
+
+                        </tr>
+
+                    }
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             EMPTY STATE
+             ================================================= -->
+
+        <div id="reviewEmptyState"
+             class="review-empty-state"
+             hidden>
+
+
+            <span class="review-empty-icon">
+
+
+                <svg viewBox="0 0 24 24">
+
+                    <circle cx="11"
+                            cy="11"
+                            r="7">
+                    </circle>
+
+                    <path d="M20 20l-4-4">
+                    </path>
+
+                </svg>
+
+
+            </span>
+
+
+            <strong>
+                No review items found
+            </strong>
+
+
+            <span>
+                Try changing the current search or filter.
+            </span>
+
+
+        </div>
+
+
+
+        <!-- =================================================
+             FOOTER / PAGINATION
+             ================================================= -->
+
+        <footer class="review-table-footer">
+
+
+            <span id="reviewResultsText">
+            </span>
+
+
+
+            <div class="review-pagination">
+
+
+                <button type="button"
+                        id="reviewPrevPage"
+                        aria-label="Previous page">
+
+                    ‹
+
+                </button>
+
+
+
+                <div id="reviewPageNumbers">
+                </div>
+
+
+
+                <button type="button"
+                        id="reviewNextPage"
+                        aria-label="Next page">
+
+                    ›
+
+                </button>
+
+
+
+                <label>
+
+
+                    <span>
+                        Rows per page:
+                    </span>
+
+
+                    <select id="reviewPageSize">
+
+                        <option value="10"
+                                selected>
+                            10
+                        </option>
+
+                        <option value="20">
+                            20
+                        </option>
+
+                        <option value="50">
+                            50
+                        </option>
+
+                    </select>
+
+
+                </label>
+
+
+            </div>
+
+
+        </footer>
+
+
+    </section>
+
+
+</div>
+
+
+
+@section Scripts {
+
+    <script>
+
+        (() => {
+
+
+            const rows =
+                Array.from(
+                    document.querySelectorAll(
+                        "#reviewTableBody .review-row"
+                    )
+                );
+
+
+            const table =
+                document.getElementById(
+                    "reviewTable"
+                );
+
+
+            const search =
+                document.getElementById(
+                    "reviewSearch"
+                );
+
+
+            const statusFilter =
+                document.getElementById(
+                    "reviewStatusFilter"
+                );
+
+
+            const clearFilters =
+                document.getElementById(
+                    "reviewClearFilters"
+                );
+
+
+            const tabs =
+                Array.from(
+                    document.querySelectorAll(
+                        ".review-tab"
+                    )
+                );
+
+
+            const emptyState =
+                document.getElementById(
+                    "reviewEmptyState"
+                );
+
+
+            const resultsText =
+                document.getElementById(
+                    "reviewResultsText"
+                );
+
+
+            const previousButton =
+                document.getElementById(
+                    "reviewPrevPage"
+                );
+
+
+            const nextButton =
+                document.getElementById(
+                    "reviewNextPage"
+                );
+
+
+            const pageNumbers =
+                document.getElementById(
+                    "reviewPageNumbers"
+                );
+
+
+            const pageSizeSelect =
+                document.getElementById(
+                    "reviewPageSize"
+                );
+
+
+            let activeTab =
+                "pending";
+
+
+            let currentPage =
+                1;
+
+
+            let pageSize =
+                Number(
+                    pageSizeSelect.value
+                );
+
+
+
+            function getFilteredRows() {
+
+
+                const query =
+                    search.value
+                        .trim()
+                        .toLowerCase();
+
+
+                const selectedStatus =
+                    statusFilter.value;
+
+
+
+                return rows.filter(row => {
+
+
+                    const tabMatch =
+                        row.dataset.status === activeTab;
+
+
+                    const statusMatch =
+                        !selectedStatus ||
+                        row.dataset.status === selectedStatus;
+
+
+                    const searchMatch =
+                        !query ||
+                        row.dataset.caseId.includes(query) ||
+                        row.dataset.title.includes(query) ||
+                        row.dataset.employee.includes(query);
+
+
+
+                    return (
+                        tabMatch &&
+                        statusMatch &&
+                        searchMatch
+                    );
+
+                });
+
+            }
+
+
+
+            function renderPageNumbers(
+                totalPages
+            ) {
+
+
+                pageNumbers.innerHTML =
+                    "";
+
+
+                if (
+                    totalPages <= 0
+                ) {
+
+                    return;
+
+                }
+
+
+                for (
+                    let page = 1;
+                    page <= totalPages;
+                    page++
+                ) {
+
+
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    button.type =
+                        "button";
+
+
+                    button.textContent =
+                        page;
+
+
+                    if (
+                        page === currentPage
+                    ) {
+
+                        button.classList.add(
+                            "active"
+                        );
+
+                    }
+
+
+                    button.addEventListener(
+                        "click",
+                        () => {
+
+
+                            currentPage =
+                                page;
+
+
+                            render();
+
+                        }
+                    );
+
+
+                    pageNumbers.appendChild(
+                        button
+                    );
+
+                }
+
+            }
+
+
+
+            function render() {
+
+
+                const filtered =
+                    getFilteredRows();
+
+
+                const total =
+                    filtered.length;
+
+
+                const totalPages =
+                    Math.max(
+                        1,
+                        Math.ceil(
+                            total / pageSize
+                        )
+                    );
+
+
+                if (
+                    currentPage > totalPages
+                ) {
+
+                    currentPage =
+                        totalPages;
+
+                }
+
+
+
+                rows.forEach(row => {
+
+                    row.hidden =
+                        true;
+
+                });
+
+
+
+                const start =
+                    (currentPage - 1)
+                    * pageSize;
+
+
+                const end =
+                    Math.min(
+                        start + pageSize,
+                        total
+                    );
+
+
+
+                filtered
+                    .slice(
+                        start,
+                        end
+                    )
+                    .forEach(row => {
+
+                        row.hidden =
+                            false;
+
+                    });
+
+
+
+                const hasResults =
+                    total > 0;
+
+
+
+                table.hidden =
+                    !hasResults;
+
+
+                emptyState.hidden =
+                    hasResults;
+
+
+
+                if (hasResults) {
+
+                    resultsText.textContent =
+                        `Showing ${start + 1}–${end} of ${total} results`;
+
+                }
+                else {
+
+                    resultsText.textContent =
+                        "Showing 0 results";
+
+                }
+
+
+
+                previousButton.disabled =
+                    !hasResults ||
+                    currentPage <= 1;
+
+
+                nextButton.disabled =
+                    !hasResults ||
+                    currentPage >= totalPages;
+
+
+
+                renderPageNumbers(
+                    hasResults
+                        ? totalPages
+                        : 0
+                );
+
+            }
+
+
+
+            function resetPageAndRender() {
+
+                currentPage = 1;
+
+                render();
+
+            }
+
+
+
+            tabs.forEach(tab => {
+
+
+                tab.addEventListener(
+                    "click",
+                    () => {
+
+
+                        tabs.forEach(item => {
+
+                            item.classList.remove(
+                                "active"
+                            );
+
+                        });
+
+
+                        tab.classList.add(
+                            "active"
+                        );
+
+
+                        activeTab =
+                            tab.dataset.reviewTab;
+
+
+                        statusFilter.value =
+                            activeTab;
+
+
+                        resetPageAndRender();
+
+                    }
+                );
+
+
+            });
+
+
+
+            search.addEventListener(
+                "input",
+                resetPageAndRender
+            );
+
+
+
+            statusFilter.addEventListener(
+                "change",
+                () => {
+
+
+                    if (
+                        statusFilter.value ===
+                        "pending"
+                    ) {
+
+                        activeTab =
+                            "pending";
+
+                    }
+
+
+                    if (
+                        statusFilter.value ===
+                        "resolved"
+                    ) {
+
+                        activeTab =
+                            "resolved";
+
+                    }
+
+
+                    tabs.forEach(tab => {
+
+
+                        tab.classList.toggle(
+                            "active",
+                            tab.dataset.reviewTab ===
+                            activeTab
+                        );
+
+
+                    });
+
+
+                    resetPageAndRender();
+
+                }
+            );
+
+
+
+            clearFilters.addEventListener(
+                "click",
+                () => {
+
+
+                    search.value =
+                        "";
+
+
+                    statusFilter.value =
+                        "pending";
+
+
+                    activeTab =
+                        "pending";
+
+
+                    tabs.forEach(tab => {
+
+
+                        tab.classList.toggle(
+                            "active",
+                            tab.dataset.reviewTab ===
+                            "pending"
+                        );
+
+
+                    });
+
+
+                    resetPageAndRender();
+
+                }
+            );
+
+
+
+            pageSizeSelect.addEventListener(
+                "change",
+                () => {
+
+
+                    pageSize =
+                        Number(
+                            pageSizeSelect.value
+                        );
+
+
+                    resetPageAndRender();
+
+                }
+            );
+
+
+
+            previousButton.addEventListener(
+                "click",
+                () => {
+
+
+                    if (
+                        currentPage > 1
+                    ) {
+
+
+                        currentPage--;
+
+
+                        render();
+
+                    }
+
+
+                }
+            );
+
+
+
+            nextButton.addEventListener(
+                "click",
+                () => {
+
+
+                    const total =
+                        getFilteredRows()
+                            .length;
+
+
+                    const totalPages =
+                        Math.max(
+                            1,
+                            Math.ceil(
+                                total / pageSize
+                            )
+                        );
+
+
+                    if (
+                        currentPage < totalPages
+                    ) {
+
+
+                        currentPage++;
+
+
+                        render();
+
+                    }
+
+
+                }
+            );
+
+
+
+            statusFilter.value =
+                "pending";
+
+
+            render();
+
+
+        })();
+
+    </script>
+
 }
-
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Case</th>
-            <th>Employee #</th>
-            <th>Issue</th>
-            <th>Row</th>
-            <th>Created</th>
-            <th>Resolved</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.ExternalCaseId</td>
-                <td>@item.EmployeeNumber</td>
-                <td>@item.Issue</td>
-                <td>@item.RowNumber</td>
-                <td>@item.CreatedAt</td>
-                <td>@item.IsResolved</td>
-                <td>
-                    @if (!item.IsResolved)
-                    {
-                        <form asp-action="ResolveReview" method="post" class="d-flex gap-2">
-                            <input type="hidden"
-                                   name="ReviewItemId"
-                                   value="@item.Id" />
-
-                            <input type="text"
-                                   name="EmployeeNumber"
-                                   class="form-control form-control-sm"
-                                   value="@item.EmployeeNumber"
-                                   placeholder="Correct Employee #" />
-
-                            <button type="submit"
-                                    class="btn btn-sm btn-success">
-                                Resolve
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <span class="text-success">Resolved</span>
-                    }
-                </td>
-
-            </tr>
-        }
-    </tbody>
-</table>

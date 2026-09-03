@@ -49,13 +49,14 @@ namespace CaseManagementSystem
 
             var app = builder.Build();
 
-            // Seed Identity roles and initial Supervisor
+            // Seed initial application data
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
 
                 await IdentitySeedData.SeedAsync(services);
                 await WorkflowSeedData.SeedAsync(services);
+                await SLASeedData.SeedAsync(services);
             }
 
             // Configure the HTTP request pipeline.

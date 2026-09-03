@@ -14,108 +14,194 @@ namespace CaseManagementSystem.Controllers
     [Authorize]
     public class HomeController : Controller
     {
+        private readonly ILogger<HomeController> _logger;
         private readonly ApplicationDbContext _db;
         private readonly ISLAService _slaService;
 
         public HomeController(
+            ILogger<HomeController> logger,
             ApplicationDbContext db,
             ISLAService slaService)
         {
+            _logger = logger;
             _db = db;
             _slaService = slaService;
         }
 
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            if (!User.IsInRole(RoleNames.Supervisor) &&
-                !User.IsInRole(RoleNames.Expert))
+            var isSupervisor =
+                User.IsInRole(RoleNames.Supervisor);
+
+            var isExpert =
+                User.IsInRole(RoleNames.Expert);
+
+
+            var userId =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier
+                );
+
+
+            /*
+             * -------------------------------------------------
+             * BASE CASE QUERY
+             * -------------------------------------------------
+             *
+             * Supervisor:
+             *      sees all Cases.
+             *
+             * Expert:
+             *      sees only Cases assigned to that Expert.
+             *
+             */
+
+            var query =
+                _db.Cases
+                    .AsNoTracking()
+                    .Include(x => x.CurrentWorkflowStage)
+                    .Include(x => x.AssignedExpert)
+                    .AsQueryable();
+
+
+            if (isExpert && !isSupervisor)
             {
-                return Forbid();
+                query =
+                    query.Where(
+                        x => x.AssignedExpertId == userId
+                    );
             }
 
-            var query = _db.Cases
-                .AsNoTracking()
-                .Include(x => x.CurrentWorkflowStage)
-                .Include(x => x.AssignedExpert)
-                .AsQueryable();
 
-            // Expert sees only his own assigned Cases
-            if (User.IsInRole(RoleNames.Expert) &&
-                !User.IsInRole(RoleNames.Supervisor))
-            {
-                var userId = User.FindFirstValue(
-                    ClaimTypes.NameIdentifier);
+            var cases =
+                await query
+                    .OrderByDescending(x => x.ImportedAt)
+                    .ToListAsync();
 
-                if (string.IsNullOrWhiteSpace(userId))
-                    return Forbid();
 
-                query = query.Where(x =>
-                    x.AssignedExpertId == userId);
-            }
+            /*
+             * -------------------------------------------------
+             * BUILD HOME CASE ITEMS
+             * -------------------------------------------------
+             */
 
-            var cases = await query
-                .OrderByDescending(x => x.ImportedAt)
-                .ToListAsync();
+            var items =
+                new List<DashboardCaseItemViewModel>();
 
-            var items = new List<DashboardCaseItemViewModel>();
 
             foreach (var caseItem in cases)
             {
-                var sla = await _slaService
-                    .GetStatusAsync(caseItem);
+                var sla =
+                    await _slaService
+                        .GetStatusAsync(caseItem);
 
-                items.Add(new DashboardCaseItemViewModel
-                {
-                    Id = caseItem.Id,
-                    ExternalCaseId = caseItem.ExternalCaseId,
-                    Title = caseItem.Title,
-                    Priority = caseItem.Priority.ToString(),
-                    CurrentStage =
-                        caseItem.CurrentWorkflowStage?.Name
-                        ?? string.Empty,
-                    AssignedExpert =
-                        caseItem.AssignedExpert?.FullName
-                        ?? string.Empty,
-                    DueDate = sla.DueDate,
-                    IsDelayed = sla.IsDelayed
-                });
+
+                items.Add(
+                    new DashboardCaseItemViewModel
+                    {
+                        Id =
+                            caseItem.Id,
+
+                        ExternalCaseId =
+                            caseItem.ExternalCaseId,
+
+                        Title =
+                            caseItem.Title,
+
+                        Priority =
+                            caseItem.Priority.ToString(),
+
+                        CurrentStage =
+                            caseItem.CurrentWorkflowStage?.Name
+                            ?? string.Empty,
+
+                        AssignedExpert =
+                            caseItem.AssignedExpert?.FullName
+                            ?? string.Empty,
+
+                        DueDate =
+                            sla.DueDate,
+
+                        IsDelayed =
+                            sla.IsDelayed
+                    }
+                );
             }
 
-            var model = new DashboardViewModel
+
+            /*
+             * -------------------------------------------------
+             * HOME VIEW MODEL
+             * -------------------------------------------------
+             */
+
+            var model =
+                new DashboardViewModel
+                {
+                    TotalCases =
+                        items.Count,
+
+                    InProgressCount =
+                        items.Count(
+                            x =>
+                                x.CurrentStage ==
+                                WorkflowStageNames.InProgress
+                        ),
+
+                    ChallengeCount =
+                        items.Count(
+                            x =>
+                                x.CurrentStage ==
+                                WorkflowStageNames.Challenge
+                        ),
+
+                    DelayedCount =
+                        items.Count(
+                            x => x.IsDelayed
+                        ),
+
+                    CompletedCount =
+                        items.Count(
+                            x =>
+                                x.CurrentStage ==
+                                WorkflowStageNames.Completed
+                        ),
+
+                    SelectedFilter =
+                        "All",
+
+                    Cases =
+                        items
+                };
+
+
+            /*
+             * -------------------------------------------------
+             * SUPERVISOR IMPORT NEEDS REVIEW
+             * -------------------------------------------------
+             */
+
+            if (isSupervisor)
             {
-                TotalCases = items.Count,
+                ViewBag.NeedsReviewCount =
+                    await _db.ImportReviewItems
+                        .AsNoTracking()
+                        .CountAsync(
+                            x => !x.IsResolved
+                        );
+            }
+            else
+            {
+                ViewBag.NeedsReviewCount = 0;
+            }
 
-                InProgressCount = items.Count(x =>
-                    x.CurrentStage ==
-                    WorkflowStageNames.InProgress),
-
-                ChallengeCount = items.Count(x =>
-                    x.CurrentStage ==
-                    WorkflowStageNames.Challenge),
-
-                DelayedCount = items.Count(x =>
-                    x.IsDelayed),
-
-                CompletedCount = items.Count(x =>
-                    x.CurrentStage ==
-                    WorkflowStageNames.Completed),
-
-                SelectedFilter = "All",
-
-                Cases = items
-            };
 
             return View(model);
         }
 
-        [AllowAnonymous]
-        public IActionResult Privacy()
-        {
-            return View();
-        }
 
-        [AllowAnonymous]
         [ResponseCache(
             Duration = 0,
             Location = ResponseCacheLocation.None,
@@ -128,7 +214,8 @@ namespace CaseManagementSystem.Controllers
                     RequestId =
                         Activity.Current?.Id
                         ?? HttpContext.TraceIdentifier
-                });
+                }
+            );
         }
     }
 }
